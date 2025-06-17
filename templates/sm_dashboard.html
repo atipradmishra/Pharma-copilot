@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}Sample Management Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-semibold text-gray-800">📊 Sample Management Dashboard</h2>
+    <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+  </header>
+
+  <!-- AI Summary Section -->
+  <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">🤖 AI-Powered Summary & Insights</h3>
+    <div id="ai-summary" class="text-gray-700 text-sm leading-relaxed">
+      <p class="italic text-gray-400">Loading summary...</p>
+    </div>
+  </div>
+
+
+  <!-- Consolidated KPI Card -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Grouped KPI Card -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">📊 Sample Intake</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Today</div>
+          <div id="daily_new" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">This Week</div>
+          <div id="weekly_new" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">This month</div>
+          <div id="monthly_new" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">⏳ Samples by Testing Status</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Received</div>
+          <div id="recived" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">In Testing</div>
+          <div id="testing" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Disposed</div>
+          <div id="disposed" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Completed</div>
+          <div id="completed" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tests by Type KPI Card -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">🧪 Tests by Type</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Chemical</div>
+          <div id="kpi-chemical" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Identity</div>
+          <div id="kpi-identity" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Microbial</div>
+          <div id="kpi-microbial" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+          <div class="text-sm text-gray-500">Stability</div>
+          <div id="kpi-stability" class="text-xl font-bold text-indigo-600">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other KPI Card -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="bg-white p-4 rounded-xl shadow-md p-6 mb-8">
+        <div class="text-sm text-gray-600">Avg Turnaround (days)</div>
+        <div id="avg_tat" class="text-2xl font-bold text-indigo-600">-</div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-md p-6 mb-8">
+        <div class="text-sm text-gray-600">Samples Disposed This Month</div>
+        <div id="disposed_month" class="text-2xl font-bold text-indigo-600">-</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Chart Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📈 Samples Over Time</h3>
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📦 Sample Status Distribution</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+  <div class="bg-white p-4 rounded-xl shadow mb-12">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">🥧 Samples by Source</h3>
+      <canvas id="pieChart"></canvas>
+  </div>
+</div>
+
+<script>
+  async function loadAISummary() {
+    try {
+      const res = await fetch("/api/ai-summary");
+      const data = await res.json();
+      document.getElementById("ai-summary").innerHTML = data.summary.replace(/\n/g, "<br>");
+    } catch (error) {
+      document.getElementById("ai-summary").innerHTML = `<p class="text-red-500">Failed to load summary.</p>`;
+    }
+  }
+
+  loadAISummary();
+
+  async function loadKPIs() {
+    const res = await fetch("/api/kpis");
+    const data = await res.json();
+    document.getElementById("daily_new").innerText = data.daily_new;
+    document.getElementById("weekly_new").innerText = data.weekly_new;
+    document.getElementById("monthly_new").innerText = data.monthly_new;
+    document.getElementById("completed").innerText = data.status_completed;
+    document.getElementById("testing").innerText = data.status_in_testing;
+    document.getElementById("recived").innerText = data.status_recived;
+    document.getElementById("disposed").innerText = data.status_disposed;
+    document.getElementById("avg_tat").innerText = data.average_tat;
+    document.getElementById("disposed_month").innerText = data.disposed_this_month;
+
+    const testMap = {
+      "Chemical": "kpi-chemical",
+      "Identity": "kpi-identity",
+      "Microbial": "kpi-microbial",
+      "Stability": "kpi-stability"
+    };
+
+    data.test_types.forEach(test => {
+      const elId = testMap[test.TEST_REQUIRED];
+      if (elId && document.getElementById(elId)) {
+        document.getElementById(elId).innerText = test.count;
+      }
+    });
+
+  }
+
+  async function loadCharts() {
+    const res = await fetch("/api/chart-data");
+    const { line, pie, bar } = await res.json();
+
+    new Chart(document.getElementById("lineChart"), {
+      type: "line",
+      data: {
+        labels: line.map(d => d.date),
+        datasets: [{
+          label: "Samples Received",
+          data: line.map(d => d.count),
+          borderColor: "#6366f1",
+          backgroundColor: "rgba(99, 102, 241, 0.1)",
+          fill: true
+        }]
+      }
+    });
+
+    new Chart(document.getElementById("pieChart"), {
+      type: "pie",
+      data: {
+        labels: pie.map(d => d.SOURCE),
+        datasets: [{
+          data: pie.map(d => d.count),
+          backgroundColor: ['#6366f1','#06b6d4','#f59e0b','#ef4444']
+        }]
+      }
+    });
+
+    new Chart(document.getElementById("barChart"), {
+      type: "bar",
+      data: {
+        labels: bar.map(d => d.STATUS),
+        datasets: [{
+          label: "Sample Status",
+          data: bar.map(d => d.count),
+          backgroundColor: '#10b981'
+        }]
+      }
+    });
+  }
+
+  loadKPIs();
+  loadCharts();
+</script>
+{% endblock %}

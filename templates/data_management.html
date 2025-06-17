@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Data Management{% endblock %}
+{% block content %}
+  <div class="ml-64 p-6">
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-500 z-50"></div>
+
+    <div id="loader" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+      <div class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+    </div>
+    <header class="flex items-center justify-between mb-8">
+      <h1 class="text-2xl font-bold">Data Management</h1>
+      <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+    </header>
+    <div class="flex justify-between items-center mb-6">
+      <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" id="uploadButton">
+        Upload Metadata file
+      </button>
+
+      <form>
+        <input type="file" id="metadatafileInput" style="display: none;">
+      </form>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
+              onclick="document.getElementById('upload-modal').classList.remove('hidden')">
+        Upload New File
+      </button>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow">
+      <table class="min-w-full text-sm text-left text-gray-600">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-100">
+          <tr>
+            <th scope="col" class="px-4 py-3">File Name</th>
+            <th scope="col" class="px-4 py-3">Size</th>
+            <th scope="col" class="px-4 py-3">Location</th>
+            <th scope="col" class="px-4 py-3">Date Uploaded</th>
+            <th scope="col" class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for file in files %}
+          <tr class="border-b">
+            <td class="px-4 py-3">{{file.file_name}}</td>
+            <td class="px-4 py-3">2.0KB</td>
+            <td class="px-4 py-3">{{ file.file_path }}</td>
+            <td class="px-4 py-3 text-green-600 font-semibold">{{file.created_at}}</td>
+            <td class="px-4 py-3">
+              <button class="text-blue-600 hover:underline">Download</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal"
+       class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-md w-full max-w-xl">
+      <h2 class="text-xl font-bold mb-4">Upload New File</h2>
+      <form id='upload-form' method="POST" enctype="multipart/form-data" class="space-y-4">
+
+        <!-- Category Selection -->
+        <div>
+          <label class="block mb-2 font-medium">Select Category</label>
+          <select name="category" required class="w-full px-4 py-2 border rounded-lg">
+            <option value="">-- Select Category --</option>
+            <option value="inventory_items">Inventory Items</option>
+            <option value="instrument_schedule">Instrument Schedule</option>
+            <option value="expiry_alerts">Expiry Alerts</option>
+            <option value="sample_labels">Sample Labels</option>
+            <option value="samples">Samples</option>
+            <option value="stock_thresholds">Stock Thresholds</option>
+          </select>
+        </div>
+
+        <!-- Data File Upload -->
+        <div>
+          <label class="block mb-2 font-medium">Upload CSV Data File</label>
+          <input type="file" name="file" accept=".csv" required
+                class="w-full px-4 py-2 border rounded-lg">
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end space-x-4">
+          <button type="button"
+                  class="px-4 py-2 border rounded hover:bg-gray-100"
+                  onclick="document.getElementById('upload-modal').classList.add('hidden')">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Upload & Save
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+  <script>
+
+    document.getElementById("uploadButton").addEventListener("click", () => {
+      document.getElementById("metadatafileInput").click();
+    });
+
+    document.getElementById("metadatafileInput").addEventListener("change", () => {
+      const fileInput = document.getElementById("metadatafileInput");
+      const file = fileInput.files[0];
+      
+
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("/api/upload-metadata", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => alert("Upload successful: " + data.message))
+      .catch(error => alert("Upload failed: " + error));
+    });
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.remove('bg-green-600', 'bg-red-600');
+      toast.classList.add(isError ? 'bg-red-600' : 'bg-green-600');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+    function showLoader() {
+      document.getElementById('loader').classList.remove('hidden');
+    }
+
+    function hideLoader() {
+      document.getElementById('loader').classList.add('hidden');
+    }
+    const form = document.getElementById('upload-form');
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      showLoader();
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        hideLoader();
+
+        if (res.ok && data.success) {
+          showToast('✅ File uploaded successfully!');
+          form.reset();
+        } else {
+          showToast(data.message || '❌ Upload failed', true);
+        }
+      } catch (err) {
+        hideLoader();
+        console.error(err);
+        showToast('❌ Something went wrong. Try again later.', true);
+      }
+    });
+  </script>
+
+{% endblock %}

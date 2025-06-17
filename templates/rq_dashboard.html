@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Reporting & QC Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+    <header class="flex items-center justify-between mb-8">
+      <h2 class="text-3xl font-semibold text-gray-800">🧪 Reporting & QC Dashboard</h2>
+      <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+    </header>
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4" id="kpi-cards"></div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+      <!-- Line Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Daily Report Trend</h2>
+        <canvas id="lineChart" height="200"></canvas>
+      </div>
+
+      <!-- Radar Chart -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Test Type Performance</h2>
+        <canvas id="radarChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          <!-- Status Table -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Status Overview</h2>
+        <table class="min-w-full text-sm text-left">
+          <thead class="bg-gray-200 text-gray-600">
+            <tr><th class="py-2 px-4">Status</th><th class="py-2 px-4">Count</th></tr>
+          </thead>
+          <tbody id="status-table"></tbody>
+        </table>
+      </div>
+
+      <!-- Repeat Test Types -->
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Repeat Tests</h2>
+        <ul id="repeat-tests" class="space-y-2"></ul>
+      </div>
+    </div>
+
+  <script>
+    fetch('/api/dummy-reporting-qc')
+      .then(res => res.json())
+      .then(data => {
+        const { kpis, line_chart, status_table, radar_chart } = data;
+
+        // KPI Cards
+        const kpiData = [
+          { label: 'Weekly Reports', value: kpis.weekly_reports },
+          { label: 'Monthly Reports', value: kpis.monthly_reports },
+          { label: 'Approval Rate', value: `${kpis.approval_rate}%` },
+          { label: 'Rejected Reports', value: kpis.rejected_reports }
+        ];
+
+        const kpiContainer = document.getElementById('kpi-cards');
+        kpiData.forEach(kpi => {
+          const card = document.createElement('div');
+          card.className = 'bg-white p-4 rounded-xl shadow text-center';
+          card.innerHTML = `
+            <p class="text-sm text-gray-500">${kpi.label}</p>
+            <p class="text-2xl font-bold text-blue-600 mt-2">${kpi.value}</p>
+          `;
+          kpiContainer.appendChild(card);
+        });
+
+        // Line Chart
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        new Chart(ctxLine, {
+          type: 'line',
+          data: {
+            labels: line_chart.map(entry => entry.date),
+            datasets: [{
+              label: 'Reports Generated',
+              data: line_chart.map(entry => entry.count),
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } }
+          }
+        });
+
+        // Radar Chart
+        const ctxRadar = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctxRadar, {
+          type: 'radar',
+          data: {
+            labels: radar_chart.map(t => t.test_type),
+            datasets: [
+              {
+                label: 'Approval Rate',
+                data: radar_chart.map(t => t.approval_rate),
+                backgroundColor: 'rgba(34,197,94,0.2)',
+                borderColor: '#22c55e'
+              },
+              {
+                label: 'Reject Rate',
+                data: radar_chart.map(t => t.reject_rate),
+                backgroundColor: 'rgba(239,68,68,0.2)',
+                borderColor: '#ef4444'
+              },
+              {
+                label: 'Repeat %',
+                data: radar_chart.map(t => t.repeat_percent),
+                backgroundColor: 'rgba(234,179,8,0.2)',
+                borderColor: '#eab308'
+              }
+            ]
+          },
+          options: {
+            responsive: true
+          }
+        });
+
+        // Status Table
+        const statusBody = document.getElementById('status-table');
+        status_table.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="py-2 px-4">${row.status}</td><td class="py-2 px-4">${row.count}</td>`;
+          statusBody.appendChild(tr);
+        });
+
+        // Repeat Tests List
+        const repeatList = document.getElementById('repeat-tests');
+        kpis.repeat_tests.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'flex justify-between text-sm';
+          li.innerHTML = `
+            <span>${item.test_type}</span>
+            <span class="text-red-600 font-medium">${item.repeat_count} repeats</span>
+          `;
+          repeatList.appendChild(li);
+        });
+      });
+  </script>
+</div>
+{% endblock %}

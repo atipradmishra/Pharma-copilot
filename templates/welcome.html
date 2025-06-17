@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Welcome to ABIS{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-blue-50 to-purple-100 flex flex-col items-center justify-center text-center px-6">
+
+  <!-- Logo -->
+  <img src="{{ url_for('static', filename='logo.webp') }}" alt="ABIS Logo" class="h-24 mb-6 drop-shadow-md">
+
+  <!-- Heading -->
+  <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to Thinklee - Product Complaint</h1>
+
+  <!-- Subheading -->
+  <p class="text-lg text-gray-700 mb-8 max-w-xl">
+    Your AI-powered assistant for Product Complaint analytics, decision support, and data visualization.
+  </p>
+
+
+  <!-- Footnote -->
+  <p class="mt-10 text-sm text-gray-500 italic">
+    Thinklee is currently in beta. More features coming soon!
+  </p>
+
+</div>
+{% endblock %}

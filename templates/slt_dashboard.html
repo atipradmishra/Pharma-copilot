@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Sample Labeling & Tracking Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-semibold text-gray-800">📊 Sample Labeling & Tracking Dashboard</h2>
+    <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+  </header>
+
+  <!-- KPI Cards -->
+  <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">🧪 Total Samples</h3>
+    <div class="grid grid-cols-2 md:grid-cols-2 gap-4 text-center">
+      <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Labeled</div>
+        <div id="total_labeled" class="text-xl font-bold text-indigo-600">-</div>
+      </div>
+      <div class="bg-gray-50 rounded-lg p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Un Labeled</div>
+        <div id="total_unlabeled" class="text-xl font-bold text-indigo-600">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📍 Samples by Current Location</h3>
+      <canvas id="locationChart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">🕒 Average Time in Each Lab Station</h3>
+      <canvas id="stationTimeChart"></canvas>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">🌡️ Sample Movement Heatmap</h3>
+      <div id="heatmapDiv" style="min-height: 500px;"></div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h5>📄 Labeled vs Unlabeled Summary</h5>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js" integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  async function loadLabelKPIs() {
+    const res = await fetch("/api/label-tracking-kpis");
+    const data = await res.json();
+
+    document.getElementById("total_labeled").innerText = data.total_labeled;
+    document.getElementById("total_unlabeled").innerText = data.total_unlabeled;
+
+    const locChart = new Chart(document.getElementById("locationChart"), {
+      type: 'bar',
+      data: {
+        labels: data.location_distribution.map(d => d.CURRENT_LOCATION),
+        datasets: [{ label: 'Samples', data: data.location_distribution.map(d => d.count) }]
+      }
+    });
+
+    if (data.average_station_time?.length) {
+      const stationChart = new Chart(document.getElementById("stationTimeChart"), {
+        type: 'bar',
+        data: {
+          labels: data.average_station_time.map(d => d.CURRENT_LOCATION),
+          datasets: [{
+            label: 'Avg Time (days)',
+            data: data.average_station_time.map(d => d.avg_days),
+            backgroundColor: '#6a5acd'
+          }]
+        }
+      });
+    }
+
+    const xLabels = data.heat_map.map(d => d.CURRENT_LOCATION);
+    const zValues = [data.heat_map.map(d => d.count)];
+
+    Plotly.newPlot('heatmapDiv', [{
+        z: zValues,
+        x: xLabels,
+        y: ['Count'],
+        type: 'heatmap',
+        colorscale: 'YlGnBu'
+      }], {
+        title: 'Sample Count by Current Location',
+        xaxis: { title: 'Current Location' },
+        yaxis: { showticklabels: false }
+      });
+    
+      new Chart(document.getElementById("pieChart"), {
+        type: "pie",
+        data: {
+          labels: data.summary.map(d => d.LABEL_PRINTED),
+          datasets: [{
+            data: data.summary.map(d => d.count),
+            backgroundColor: ['#6366f1','#06b6d4','#f59e0b','#ef4444']
+          }]
+        }
+      });
+  }
+  loadLabelKPIs();
+</script>
+{% endblock %}

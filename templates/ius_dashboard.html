@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block title %}Instrument Usage & Scheduling Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-semibold text-gray-800">📊 Instrument Usage & Scheduling Dashboard</h2>
+    <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+  </header>
+
+  <!-- KPI Cards -->
+ <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+
+    <!-- Total Scheduled Today -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h2 class="text-gray-500 text-sm font-medium">Total Scheduled Today</h2>
+      <p id="total_scheduled" class="text-4xl font-bold text-blue-600 mt-2">-</p>
+      <p class="text-sm text-gray-400 mt-1">Lab runs scheduled for today</p>
+    </div>
+
+    <!-- Technician Utilization -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h2 class="text-gray-500 text-sm font-medium mb-3">Technician Utilization</h2>
+      <div class="space-y-2" id="tech-utilization-card"></div>
+    </div>
+
+    <!-- Average Start Delay -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h2 class="text-gray-500 text-sm font-medium mb-3">Avg. Start Delay (mins)</h2>
+      <ul class="space-y-2" id="start-delay-list"></ul>
+    </div>
+
+    <!-- Average Idle Time -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+      <h2 class="text-gray-500 text-sm font-medium mb-3">Avg. Idle Time (mins)</h2>
+      <ul class="space-y-2" id="idle-time-list"></ul>
+    </div>
+
+  </div>
+
+  <!-- Chart Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📈 Instrument usage by time</h3>
+      <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+      <div id="ganttChart"></div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📦  Downtime frequency per instrument</h3>
+      <canvas id="downtimeChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<div id="ganttChart"></div>
+
+<script>
+  async function loadKPIs() {
+    const res = await fetch("/api/instrument-kpis");
+    const data = await res.json();
+    document.getElementById("total_scheduled").innerText = data.total_scheduled_today;
+
+    const totalScheduled = data.technician_utilization.reduce((sum, t) => sum + t.total_scheduled, 0);
+      const container = document.getElementById("tech-utilization-card");
+
+      data.technician_utilization.forEach(tech => {
+        const percent = ((tech.total_scheduled / totalScheduled) * 100).toFixed(1);
+
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = `
+          <p class="font-medium text-gray-700">${tech.scheduled_by}</p>
+          <div class="w-full bg-gray-200 h-2 rounded-full">
+            <div class="bg-blue-500 h-2 rounded-full" style="width: ${percent}%"></div>
+          </div>
+          <p class="text-xs text-gray-400">${tech.total_scheduled} scheduled (${percent}%)</p>
+        `;
+
+        container.appendChild(wrapper);
+    });
+
+    const list = document.getElementById("start-delay-list");
+
+    data.average_start_delay.forEach(item => {
+      let colorClass = "text-green-600";
+      if (item.avg_delay_mins >= 15) {
+        colorClass = "text-red-500";
+      } else if (item.avg_delay_mins >= 10) {
+        colorClass = "text-yellow-500";
+      }
+
+      const li = document.createElement("li");
+      li.className = "flex justify-between text-sm";
+      li.innerHTML = `
+        <span>${item.instrument_id}</span>
+        <span class="${colorClass} font-medium">${item.avg_delay_mins} min</span>
+      `;
+
+      list.appendChild(li);
+    });
+
+    const idleList = document.getElementById("idle-time-list");
+
+    data.average_idle_time.forEach(item => {
+      let colorClass = "text-green-600";
+      if (item.avg_idle_mins >= 40) {
+        colorClass = "text-red-600";
+      } else if (item.avg_idle_mins >= 25) {
+        colorClass = "text-yellow-600";
+      }
+
+      const li = document.createElement("li");
+      li.className = "flex justify-between text-sm";
+      li.innerHTML = `
+        <span>${item.instrument_id}</span>
+        <span class="${colorClass} font-medium">${item.avg_idle_mins} min</span>
+      `;
+      idleList.appendChild(li);
+    });
+    
+  }
+  async function drawGantt() {
+    const res = await fetch('/api/instrument-charts');
+    const { gantt_data, downtime_data } = await res.json();
+
+    const chartData = gantt_data.map(task => ({
+        x: [task.actual_start_time, task.actual_end_time],
+        y: [task.instrument_name, task.instrument_name],
+        mode: 'lines',
+        line: { width: 10 },
+        type: 'scatter',
+        name: task.instrument_name
+      }));
+
+    Plotly.newPlot('ganttChart', chartData, {
+        title: 'Instrument Usage Gantt Chart',
+        xaxis: { type: 'date', title: 'Time' },
+        yaxis: { title: 'Instrument' }
+    });
+
+    new Chart(document.getElementById("downtimeChart"), {
+      type: "bar",
+      data: {
+        labels: downtime_data.map(d => d.instrument_id),
+        datasets: [{
+          label: "Downtime Events",
+          data: downtime_data.map(d => d.downtime_events),
+          backgroundColor: '#ef5350'
+        }]
+      }
+    });
+  }
+  drawGantt();
+  loadKPIs();
+</script>
+
+{% endblock %}

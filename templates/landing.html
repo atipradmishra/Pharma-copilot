@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Thinklee is your AI-powered business intelligence solution. Fast, secure, and scalable insights from structured enterprise data.">
+  <link rel="icon" type="image/x-icon" href="/static/logo.ico">
+  <title>Thinklee - AI-Powered Business Intelligence</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans leading-relaxed min-h-screen">
+
+  <!-- Main Container -->
+  <div class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+
+    <!-- Logo -->
+    <div class="flex justify-center mb-6">
+      <img src="/static/logo.png" alt="Thinklee Logo" class="h-16 sm:h-20 w-auto">
+    </div>
+
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-r from-indigo-700 via-purple-600 to-pink-500 text-white px-6 py-12 rounded-2xl shadow-xl mb-12">
+      <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 leading-tight">Thinklee: Next-Generation AI-Powered Business Intelligence</h1>
+        <p class="text-base sm:text-lg mb-6">Thinklee is your AI-powered business-intelligence platform—think Perplexity for structured enterprise data. From insight to action, faster than ever before.</p>
+        <a href="/auth" class="bg-white text-indigo-700 font-bold px-6 py-3 rounded-full shadow-lg hover:bg-indigo-100 transition text-sm sm:text-base">
+          🚀 Try it Free for 15 Days – No Credit Card
+        </a>
+      </div>
+    </section>
+
+    <!-- Feature Highlights -->
+    <section class="grid gap-8 sm:grid-cols-2 mb-16">
+      <div class="bg-white p-6 sm:p-8 rounded-xl shadow hover:shadow-lg transition">
+        <h2 class="text-xl sm:text-2xl font-bold mb-4 text-indigo-700">🔧 Key Features</h2>
+        <ul class="list-disc list-inside text-gray-700 space-y-2 text-sm sm:text-base">
+          <li>Connects to Snowflake, Azure SQL, AWS RDS, CSVs, Excel</li>
+          <li>Real-time answers in seconds</li>
+          <li>Full data privacy and user-level isolation</li>
+          <li>Choose your LLM: ChatGPT, Claude, LLaMA2</li>
+          <li>Fully deployed in under 3 weeks</li>
+        </ul>
+      </div>
+      <div class="bg-white p-6 sm:p-8 rounded-xl shadow hover:shadow-lg transition">
+        <h2 class="text-xl sm:text-2xl font-bold mb-4 text-purple-700">💡 Why Choose Thinklee?</h2>
+        <ul class="list-disc list-inside text-gray-700 space-y-2 text-sm sm:text-base">
+          <li>Go from POC to production in &lt; 3 weeks</li>
+          <li>Fast insights: Seconds, not hours</li>
+          <li>Hosted on AWS, Azure, or your stack</li>
+          <li>Zero public LLM data sharing</li>
+          <li>Enterprise-ready customizability</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="bg-white px-6 py-10 rounded-xl shadow mb-16">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center mb-8">How It Works</h2>
+      <ol class="list-decimal list-inside text-base sm:text-lg space-y-4 max-w-3xl mx-auto text-gray-800">
+        <li>Sign up for a 15-day trial – no credit card required</li>
+        <li>Upload your CSV, Excel, or connect your database</li>
+        <li>RAG agents automatically generate vector indexes</li>
+        <li>Ask natural-language queries via chat interface</li>
+        <li>See instant insights on your auto-generated dashboard</li>
+      </ol>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="bg-gradient-to-r from-indigo-100 to-purple-100 px-6 py-10 rounded-xl shadow mb-16">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center mb-6">What Our Users Say</h2>
+      <div class="grid gap-6 sm:grid-cols-2 max-w-5xl mx-auto">
+        <blockquote class="bg-white p-6 rounded-lg shadow text-sm sm:text-base">
+          <p class="text-gray-800 italic">“Thinklee helped us cut data turnaround from 4 hours to 30 seconds. A true game-changer.”</p>
+          <div class="mt-4 font-semibold text-indigo-700">— VP of Analytics, Fintech Startup</div>
+        </blockquote>
+        <blockquote class="bg-white p-6 rounded-lg shadow text-sm sm:text-base">
+          <p class="text-gray-800 italic">“Security and speed were critical for us. Thinklee delivered both—without compromise.”</p>
+          <div class="mt-4 font-semibold text-indigo-700">— Data Engineer, Healthcare Enterprise</div>
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="bg-white px-6 py-8 rounded-xl shadow mb-16">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center mb-6">Frequently Asked Questions</h2>
+      <div class="space-y-4 max-w-3xl mx-auto text-gray-700 text-sm sm:text-base">
+        <details class="border rounded-lg p-4">
+          <summary class="font-semibold cursor-pointer">Is my data secure?</summary>
+          <p class="mt-2">Yes, all data is isolated per user and hosted on secure cloud infrastructure (AWS, Azure, or your own environment).</p>
+        </details>
+        <details class="border rounded-lg p-4">
+          <summary class="font-semibold cursor-pointer">Can I use my preferred LLM?</summary>
+          <p class="mt-2">Absolutely. Choose from ChatGPT, Claude, or LLaMA2 to power your queries.</p>
+        </details>
+        <details class="border rounded-lg p-4">
+          <summary class="font-semibold cursor-pointer">What happens after the free trial?</summary>
+          <p class="mt-2">You can select a paid plan based on your usage and features. No surprises or hidden fees.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Architecture Image -->
+    <div class="text-center mb-16">
+      <img loading="lazy" src="/static/landing/Thinklee-architecture.png" alt="System architecture diagram of Thinklee platform" class="mx-auto rounded-lg shadow-lg w-full max-w-4xl h-auto">
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-sm text-gray-500 mt-16">
+      <img src="/static/logo.png" alt="Thinklee Logo" class="h-10 mx-auto mb-2">
+      &copy; 2025 Thinklee Platform.
+    </footer>
+
+  </div>
+
+</body>
+</html>

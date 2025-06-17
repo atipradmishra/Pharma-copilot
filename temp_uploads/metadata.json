@@ -1,0 +1,49 @@
+{
+    "inventory_items" : [
+      {"table_name": "inventory_items", "column_name": "item_id", "data_type": "string", "format": "INV-XXXX", "allowed_values": "", "description": "Unique identifier for each inventory item."},
+      {"table_name": "inventory_items", "column_name": "item_name", "data_type": "string", "format": "", "allowed_values": "", "description": "Name or label of the inventory item."},
+      {"table_name": "inventory_items", "column_name": "category", "data_type": "string", "format": "", "allowed_values": "Chemical,Glassware,Reagent,Equipment", "description": "Category to which the item belongs."},
+      {"table_name": "inventory_items", "column_name": "quantity", "data_type": "integer", "format": "", "allowed_values": "", "description": "Quantity of the item available in inventory."},
+      {"table_name": "inventory_items", "column_name": "unit", "data_type": "string", "format": "", "allowed_values": "g,ml,pieces,kg,L", "description": "Unit of measurement for the item quantity."},
+      {"table_name": "inventory_items", "column_name": "received_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date when the item was received."},
+      {"table_name": "inventory_items", "column_name": "expiry_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date after which the item should not be used."}
+    ],
+    "instrument_schedule" : [
+      {"table_name": "instrument_schedule", "column_name": "instrument_id", "data_type": "string", "format": "INS-XXXX", "allowed_values": "", "description": "Unique identifier for each instrument."},
+      {"table_name": "instrument_schedule", "column_name": "instrument_name", "data_type": "string", "format": "", "allowed_values": "", "description": "Name or model of the instrument."},
+      {"table_name": "instrument_schedule", "column_name": "scheduled_by", "data_type": "string", "format": "", "allowed_values": "", "description": "Name of the person who scheduled the activity."},
+      {"table_name": "instrument_schedule", "column_name": "purpose", "data_type": "string", "format": "", "allowed_values": "Maintenance,Calibration,Testing,Cleaning,Validation", "description": "Purpose of the scheduled activity."},
+      {"table_name": "instrument_schedule", "column_name": "scheduled_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date on which the activity is scheduled."},
+      {"table_name": "instrument_schedule", "column_name": "duration_hrs", "data_type": "float", "format": "", "allowed_values": "", "description": "Expected duration of the activity in hours."}
+    ],
+
+    "expiry_alerts" : [
+      {"table_name": "expiry_alerts", "column_name": "item_id", "data_type": "string", "format": "", "allowed_values": "", "description": "Unique identifier linking to an inventory item."},
+      {"table_name": "expiry_alerts", "column_name": "expiry_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Expiry date of the inventory item."},
+      {"table_name": "expiry_alerts", "column_name": "alert_flag", "data_type": "string", "format": "", "allowed_values": "Yes,No", "description": "Flag indicating if an expiry alert is active."}
+    ],
+
+    "sample_labels" : [
+      {"table_name": "sample_labels", "column_name": "sample_id", "data_type": "string", "format": "SMP-XXXX", "allowed_values": "", "description": "Unique identifier for each sample."},
+      {"table_name": "sample_labels", "column_name": "label_type", "data_type": "string", "format": "", "allowed_values": "Barcode,QR", "description": "Type of label assigned to the sample."},
+      {"table_name": "sample_labels", "column_name": "label_printed", "data_type": "string", "format": "", "allowed_values": "Yes,No", "description": "Indicates whether the label has been printed."},
+      {"table_name": "sample_labels", "column_name": "label_print_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date when the label was printed."}
+    ],
+
+    "samples" : [
+      {"table_name": "samples", "column_name": "sample_id", "data_type": "string", "format": "SMP-XXXX", "allowed_values": "", "description": "Unique identifier for each sample."},
+      {"table_name": "samples", "column_name": "source", "data_type": "string", "format": "", "allowed_values": "", "description": "Name of the sample provider or organization."},
+      {"table_name": "samples", "column_name": "test_required", "data_type": "string", "format": "", "allowed_values": "Microbial,Chemical,Physical,Toxicology", "description": "Type of test required for the sample."},
+      {"table_name": "samples", "column_name": "received_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date the sample was received."},
+      {"table_name": "samples", "column_name": "current_location", "data_type": "string", "format": "", "allowed_values": "", "description": "Current physical location of the sample."},
+      {"table_name": "samples", "column_name": "status", "data_type": "string", "format": "", "allowed_values": "Received,In Testing,Completed,Disposed", "description": "Current processing status of the sample."},
+      {"table_name": "samples", "column_name": "final_disposal_date", "data_type": "date", "format": "MM/DD/YYYY", "allowed_values": "", "description": "Date the sample was disposed of, if applicable."}
+    ],
+
+    "stock_thresholds" : [
+      {"table_name": "stock_thresholds", "column_name": "item_id", "data_type": "string", "format": "", "allowed_values": "", "description": "Unique identifier linking to an inventory item."},
+      {"table_name": "stock_thresholds", "column_name": "current_stock", "data_type": "integer", "format": "", "allowed_values": "", "description": "Current quantity of the item in stock."},
+      {"table_name": "stock_thresholds", "column_name": "threshold_limit", "data_type": "integer", "format": "", "allowed_values": "", "description": "Minimum stock level before reorder is needed."},
+      {"table_name": "stock_thresholds", "column_name": "reorder_flag", "data_type": "string", "format": "", "allowed_values": "Yes,No", "description": "Flag indicating if reorder is required."}
+    ]
+  }

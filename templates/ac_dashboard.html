@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Alerts & Compliance Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-semibold text-gray-800">🚨 Alerts & Compliance Dashboard</h2>
+   <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+  </header>
+    <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4" id="alert-kpis"></div>
+
+    <!-- Pie Chart + Ack Distribution Bar Chart -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Alert Category Breakdown</h2>
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-4">Acknowledgment Time Distribution</h2>
+        <canvas id="ackBarChart"></canvas>
+      </div>
+  </div>
+
+    <!-- Timeline -->
+  <div class="bg-white p-6 rounded-xl shadow mb-4">
+      <h2 class="text-lg font-semibold mb-4">Recent Alerts Timeline</h2>
+      <ul id="timeline" class="space-y-3 text-sm"></ul>
+  </div>
+
+  <script>
+    fetch('/api/dummy-alerts-dashboard')
+      .then(res => res.json())
+      .then(data => {
+        const { kpis, timeline, pie_chart, ack_distribution } = data;
+
+        // KPI Cards
+        const kpiItems = [
+          { label: 'Total Alerts', value: kpis.total_alerts_triggered },
+          { label: 'Critical Alerts', value: kpis.critical_alerts },
+          { label: 'Emails Sent', value: kpis.notifications_sent.email },
+          { label: 'Slack Alerts', value: kpis.notifications_sent.slack },
+          { label: 'Avg Ack Time', value: `${kpis.avg_acknowledgment_time_minutes} min` }
+        ];
+        const kpiContainer = document.getElementById('alert-kpis');
+        kpiItems.forEach(kpi => {
+          const card = document.createElement('div');
+          card.className = 'bg-white p-4 rounded-xl shadow text-center';
+          card.innerHTML = `
+            <p class="text-sm text-gray-500">${kpi.label}</p>
+            <p class="text-2xl font-bold text-red-600 mt-2">${kpi.value}</p>
+          `;
+          kpiContainer.appendChild(card);
+        });
+
+        // Pie Chart
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        new Chart(pieCtx, {
+          type: 'pie',
+          data: {
+            labels: pie_chart.map(item => item.category),
+            datasets: [{
+              data: pie_chart.map(item => item.count),
+              backgroundColor: ['#ef4444', '#f97316', '#3b82f6', '#10b981', '#eab308']
+            }]
+          }
+        });
+
+        // Ack Bar Chart
+        const ackCtx = document.getElementById('ackBarChart').getContext('2d');
+        new Chart(ackCtx, {
+          type: 'bar',
+          data: {
+            labels: ack_distribution.map(d => d.range),
+            datasets: [{
+              label: 'Count',
+              data: ack_distribution.map(d => d.count),
+              backgroundColor: '#60a5fa'
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+
+        // Timeline
+        const timelineContainer = document.getElementById('timeline');
+        timeline.forEach(entry => {
+          const li = document.createElement('li');
+          let color = 'text-gray-600';
+          if (entry.severity === 'Critical') color = 'text-red-600';
+          else if (entry.severity === 'Warning') color = 'text-yellow-600';
+          else if (entry.severity === 'Info') color = 'text-blue-600';
+          const time = new Date(entry.timestamp).toLocaleString();
+          li.innerHTML = `
+            <div class="flex justify-between">
+              <span>${entry.category}</span>
+              <span class="${color} font-medium">${entry.severity}</span>
+            </div>
+            <div class="text-gray-400 text-xs">${time}</div>
+          `;
+          timelineContainer.appendChild(li);
+        });
+      });
+  </script>
+</div>
+{% endblock %}

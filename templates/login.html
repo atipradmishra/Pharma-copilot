@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="auth-container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div class="container">
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-8 col-lg-6">
+                <!-- Centered Logo + Heading -->
+					<div class="text-center mb-4">
+						<img src="{{ url_for('static', filename='logo.webp') }}" alt="CloudHub Logo" class="mb-3" style="height: 100px;">
+						<h2 class="h3 text-dark">🔐 Welcome to CloudHub Platform</h2>
+					</div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="row justify-content-center">
+                            <div class="col-12 col-md-10">
+                                {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Auth Card -->
+                <div class="card shadow-lg border-0" style="border-radius: 15px;">
+                    <div class="card-body p-4 p-md-5">
+                        <!-- Navigation Tabs -->
+                        <ul class="nav nav-pills nav-justified mb-4">
+                            <li class="nav-item">
+                                <a class="nav-link active bg-primary text-white" 
+                                   href="{{ url_for('auth.login') }}">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-secondary" 
+                                   href="{{ url_for('auth.register') }}">Register</a>
+                            </li>
+                        </ul>
+
+                        <!-- Login Form -->
+                        <form method="POST" action="{{ url_for('auth.login') }}">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input name="username" 
+                                       type="text" 
+                                       class="form-control form-control-lg"
+                                       placeholder="Enter username" 
+                                       required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="password" class="form-label">Password</label>
+                                <input name="password" 
+                                       type="password" 
+                                       class="form-control form-control-lg"
+                                       placeholder="Enter password" 
+                                       required>
+                            </div>
+                            <button type="submit" 
+                                    class="btn btn-primary btn-lg w-100 py-3">
+                                Login
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

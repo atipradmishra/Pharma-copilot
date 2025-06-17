@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Inventory Monitoring Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-8">
+    <h2 class="text-3xl font-semibold text-gray-800">📊 Inventory Monitoring Dashboard</h2>
+    <div class="text-sm text-gray-500">👤 Logged in as {{ session.username }} ({{ session.role }})</div>
+  </header>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white p-4 rounded-xl shadow hover:shadow-md transition">
+      <div class="text-sm font-semibold text-gray-600">Total In Stock</div>
+      <div id="total_in_stock" class="text-2xl font-bold text-indigo-700">-</div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow hover:shadow-md transition">
+      <div class="text-sm font-semibold text-gray-600">Below Reorder Level</div>
+      <div id="below_reorder" class="text-2xl font-bold text-indigo-700">-</div>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow hover:shadow-md transition">
+      <div class="text-sm font-semibold text-gray-600">Expiring in 30 Days</div>
+      <div id="expiring" class="text-2xl font-bold text-indigo-700">-</div>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📦 Monthly Usage per Item</h3>
+      <canvas id="barChart2"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📦 Inventory consumption trend</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📊 Category Distribution</h3>
+      <canvas id="donutChart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📋 Stock vs Thresholds</h3>
+      <div id="stockChart" style="width: 100%; max-width: 700px; height: 450px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js" integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+async function loadInventoryKPIs() {
+  const res = await fetch("/api/inventory-kpis");
+  const data = await res.json();
+  document.getElementById("total_in_stock").innerText = data.total_in_stock;
+  document.getElementById("below_reorder").innerText = data.below_reorder;
+  document.getElementById("expiring").innerText = data.expiring_soon;
+}
+
+async function loadInventoryCharts() {
+  const res = await fetch("/api/inventory-charts");
+  const data = await res.json();
+
+  new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+      labels: data.consumption_trend.map(d => d.used_date),
+      datasets: [{
+        label: "Used",
+        data: data.consumption_trend.map(d => d.total),
+        backgroundColor: '#ff7043'
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("barChart2"), {
+    type: "bar",
+    data: {
+      labels: data.monthly_usage.map(d => d.item_name),
+      datasets: [{
+        label: "Used",
+        data: data.monthly_usage.map(d => d.total_used),
+        backgroundColor: '#b4e2b6'
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("donutChart"), {
+    type: "doughnut",
+    data: {
+      labels: data.category_distribution.map(d => d.CATEGORY),
+      datasets: [{
+        data: data.category_distribution.map(d => d.count),
+        backgroundColor: ['#42a5f5', '#66bb6a', '#ffa726', '#ab47bc']
+      }]
+    }
+  });
+
+  const labels = data.stock_table.map(item => item.ITEM_NAME);
+  const currentStock = data.stock_table.map(item => item.CURRENT_STOCK);
+  const thresholdLimit = data.stock_table.map(item => item.THRESHOLD_LIMIT);
+  const trace1 = {
+      x: labels,
+      y: currentStock,
+      name: 'Current Stock',
+      type: 'bar',
+      marker: { color: 'rgba(54, 162, 235, 0.7)' }
+    };
+
+  const trace2 = {
+      x: labels,
+      y: thresholdLimit,
+      name: 'Threshold Limit',
+      type: 'bar',
+      marker: { color: 'rgba(255, 99, 132, 0.7)' }
+    };
+
+  const layout = {
+      title: 'Current Stock vs Threshold Limit',
+      barmode: 'group',
+      xaxis: {
+        title: 'Item Name',
+        fixedrange: false
+      },
+      yaxis: {
+        title: 'Quantity',
+        fixedrange: false
+      }
+  };
+
+  Plotly.newPlot('stockChart', [trace1, trace2], layout, {
+      responsive: true,
+      displaylogo: false,
+      scrollZoom: true
+    });
+}
+
+loadInventoryKPIs();
+loadInventoryCharts();
+</script>
+
+{% endblock %}

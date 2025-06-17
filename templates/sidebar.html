@@ -1,0 +1,74 @@
+<style>
+    #powered-by {
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      padding: 10px;
+      position: absolute;
+      bottom: 5px;
+      left:10px;
+    }
+    img{
+      margin-top: 20px;
+      height: 10%;
+      margin-right:auto;
+      margin-left:auto;
+    }
+</style>
+<div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-md border-r z-40 -translate-x-full lg:translate-x-0" style="overflow: auto;">
+  <img src="/static/logo.png" alt="logo">
+
+  {% if session.get("email") %}
+    <div class="p-4 text-sm text-gray-500 border-b">
+      Welcome, <strong>{{ session.email }}</strong>
+    </div>
+  {% endif %}
+
+  <ul class="mt-4 space-y-2 px-4 text-gray-700">
+      <li>
+        <a href="/sm_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/sm_dashboard' else '' }}">Sample Management Dashboard</a>
+      </li>
+      <li>
+        <a href="/slt_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/slt_dashboard' else '' }}">Sample Labeling & Tracking Dashboard</a>
+      </li>
+      <li>
+        <a href="/im_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/im_dashboard' else '' }}">Inventory Monitoring Dashboard</a>
+      </li>
+      <li>
+        <a href="/ius_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/ius_dashboard' else '' }}">Instrument Usage & Scheduling Dashboard</a>
+      </li>
+      <li>
+        <a href="/rq_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/rq_dashboard' else '' }}">Reporting & QC Dashboard</a>
+      </li>
+      <li>
+        <a href="/ac_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/ac_dashboard' else '' }}">Alerts & Compliance Dashboard</a>
+      </li>
+        <a href="/chat-with-rag" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/chat-with-rag' else '' }}">Copilot Query</a>
+      </li>
+      <li>
+        <a href="/graph-query" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/graph-query' else '' }}">Graph Query</a>
+      </li>
+      
+      {% if session.get("role") == "admin" %}
+        <li>
+          <a href="/query-log-analyzer" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/query-log-analyzer' else '' }}">Query Log Analyzer</a>
+        </li>
+        <li>
+          <a href="/rag-configure" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/rag-configure' else '' }}">Configure/Manage RAG Agents</a>
+        </li>
+        <li>
+          <a href="/data-management" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/data-management' else '' }}">Data Management</a>
+        </li>
+        <li>
+        <li>
+          <a href="/prompt-config" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/prompt-config' else '' }}">Prompt Setting</a>
+        </li>
+        <li>
+          <a href ="data-dash-config" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/data-dash-config' else '' }}">Configure Dashboard</a>
+        </li>
+      {% endif %}
+      <li>
+        <a href="/logout" class="block px-2 py-2 rounded hover:bg-red-100 text-red-600">Logout</a>
+      </li>
+  </ul>
+</div>

@@ -1,0 +1,167 @@
+{% extends 'base.html' %} 
+{% block title %}Data Mangement{% endblock %} 
+{% block content %}
+<div class="ml-64 p-6 min-h-screen flex">
+
+    <!-- Main Content -->
+    <div class="flex-1 p-6">
+        <div class="bg-white shadow rounded-lg p-6 h-full flex flex-col">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">💬 Chat with Co-pilot</h2>
+
+            <!-- Chat Messages Window -->
+            <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 mb-4 border rounded-lg p-4 bg-gray-100">
+                <!-- Placeholder messages -->
+                <div class="flex items-start space-x-2">
+                    <div class="bg-blue-100 text-blue-800 p-3 rounded-lg max-w-xl">Hi there! Ask me anything about your Lab data.</div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form id="chat-form" class="p-4 border-t flex items-center space-x-2">
+                <button type="button" id="mic-btn" title="Speak your question"
+                        class="bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300">
+                🎤
+                </button>
+                <input type="text" id="chat-input" placeholder="Ask a question..." required
+                    class="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-blue-400">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;")
+                .replace(/\n/g, "<br>");
+        }
+        function getTimestamp() {
+            const now = new Date();
+            return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('chat-input');
+        const chatBox = document.getElementById('chat-box');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userMessage = input.value.trim();
+
+            chatBox.innerHTML += `<div class='flex items-start justify-end space-x-2'>
+                <div class='bg-gray-200 text-gray-800 p-3 rounded-lg max-w-xl'>
+                    ${escapeHtml(userMessage)}
+                    <div class="text-xs text-gray-500 mt-1 text-right">${getTimestamp()}</div>
+                </div>
+            </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            input.value = "";
+
+            const loadingId = "loading-msg-" + Date.now();
+            chatBox.innerHTML += `<div id="${loadingId}" class='flex items-start space-x-2'>
+                <div class='bg-yellow-100 text-yellow-800 p-3 rounded-lg max-w-xl animate-pulse'>
+                    Thinking...
+                </div>
+            </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const res = await fetch("/api/copilot-query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userMessage})
+                });
+                const data = await res.json();
+                const ragResponse = data.response;       ;
+
+                document.getElementById(loadingId)?.remove();
+
+                chatBox.innerHTML += `<div class='flex items-start space-x-2'>
+                    <div class='bg-blue-100 text-blue-800 p-3 rounded-lg max-w-xl relative'>
+                        ${escapeHtml(ragResponse)}
+                        <div class="text-xs text-gray-500 mt-1">${getTimestamp()}</div>
+                        <div class="flex items-center mt-2 space-x-2 feedback-buttons">
+                            <button onclick="submitFeedback(this, 'up')" class="text-green-600 hover:text-green-800">👍</button>
+                            <button onclick="submitFeedback(this, 'down')" class="text-red-600 hover:text-red-800">👎</button>
+                        </div>
+                    </div>
+                </div>`;
+
+
+                if (data.followups && data.followups.length > 0) {
+                const followupBlock = document.createElement("div");
+                followupBlock.className = "mt-2 ml-2 text-sm text-blue-700";
+
+                const list = data.followups.map(q =>
+                    `<li class="cursor-pointer hover:underline" onclick="askFollowUp('${q.replace(/'/g, "\\'")}')">${q}</li>`
+                ).join("");
+
+                followupBlock.innerHTML = `<ul class="list-disc pl-5">💡You could also ask: ${list}</ul>`;
+                chatBox.lastElementChild.querySelector('.bg-blue-100').appendChild(followupBlock);
+            }
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (error) {
+                document.getElementById(loadingId)?.remove();
+                chatBox.innerHTML += `<div class='flex items-start space-x-2'>
+                    <div class='bg-red-100 text-red-800 p-3 rounded-lg max-w-xl'>
+                        ⚠️ Error getting response.
+                        <div class="text-xs text-gray-500 mt-1">${getTimestamp()}</div>
+                    </div>
+                </div>`;
+            }
+        });
+    
+        function askFollowUp(question) {
+            input.value = question;
+            form.dispatchEvent(new Event("submit"));
+        }
+
+        function submitFeedback(button, type) {
+            // Handle feedback logic here (e.g., send to server)
+            button.parentElement.innerHTML = type === 'up' ? 'Thanks for your feedback! 👍' : 'Thanks for your feedback! 👎';
+        }
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        const micBtn = document.getElementById("mic-btn");
+        const chatInput1 = document.getElementById("chat-input");
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        console.log("SpeechRecognition loaded:", !!SpeechRecognition);
+
+        if (SpeechRecognition) {
+            micBtn.addEventListener("click", () => {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = "en-US";
+
+            recognition.start();
+            micBtn.innerText = "🎙️ Listening...";
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                chatInput1.value = transcript;
+                micBtn.innerText = "🎤";
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                micBtn.innerText = "🎤";
+            };
+
+            recognition.onend = () => {
+                micBtn.innerText = "🎤";
+            };
+            });
+        } else {
+            micBtn.disabled = true;
+            micBtn.title = "Speech Recognition not supported";
+        }
+    </script>    
+{% endblock %}

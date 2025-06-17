@@ -1,0 +1,43 @@
+{% extends 'base.html' %} 
+{% block title %}RAG Configure{% endblock %} 
+{% block content %}
+    <div class="ml-64 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Configure RAG Agents</h1>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" onclick="document.location.href='/rag-agents/add';">
+              + Add New Agent
+            </button>
+          </div>
+      
+          <div class="bg-white p-4 rounded-lg shadow">
+            <table class="min-w-full text-sm text-left text-gray-600">
+              <thead class="text-xs text-gray-500 uppercase bg-gray-100">
+                <tr>
+                  <th scope="col" class="px-4 py-3">Agent Name</th>
+                  <th scope="col" class="px-4 py-3">Source</th>
+                  <th scope="col" class="px-4 py-3">Status</th>
+                  <th scope="col" class="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b">
+                  <td class="px-4 py-3">Market Insights Agent</td>
+                  <td class="px-4 py-3">/data/market.json</td>
+                  <td class="px-4 py-3 text-green-600 font-semibold">Active</td>
+                  <td class="px-4 py-3">
+                    <button class="text-blue-600 hover:underline">Edit</button>
+                  </td>
+                </tr>
+                <tr class="border-b">
+                  <td class="px-4 py-3">Risk Monitor Bot</td>
+                  <td class="px-4 py-3">S3://analytics/risk</td>
+                  <td class="px-4 py-3 text-yellow-600 font-semibold">Pending</td>
+                  <td class="px-4 py-3">
+                    <button class="text-blue-600 hover:underline">Edit</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+    </div>
+{% endblock %}
