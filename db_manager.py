@@ -1,6 +1,6 @@
 import sqlite3
 import hashlib
-from config import BUCKET_NAME,DB_NAME
+from config import DB_NAME
 
 # Create users table
 def create_users_table():
