@@ -5,11 +5,9 @@ from db_manager import create_users_table, register_user, authenticate_user
 from chatagent.chat_agent import execute_sql_query, generate_sql_from_question, generate_natural_language_response, suggest_follow_up_questions
 import json
 import os
-from config import DB_NAME,BUCKET_NAME, aws_access_key, aws_secret_key, client
+from config import DB_NAME,client
 import pandas as pd
-import boto3
 import os
-import uuid
 import sqlite3
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
@@ -19,13 +17,6 @@ app = Flask(__name__)
 app.secret_key = "dev_zQ0xyfjkundFVF9GiR0PnT8DbTVczXd3yumese3RGlKax6OIOBWku4giwUL45LKIPhnCaxSfNNyuMUU5CgZnrplmlaHBvQAAFx0"
 
 create_users_table()
-
-s3 = boto3.client(
-            "s3",
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
-            region_name='us-east-1'
-        )
 
 
 def query_db(query, params=()):
@@ -803,62 +794,6 @@ def data_management():
 
     return render_template("data_management.html", files=files)
 
-@app.route('/upload-validate-file', methods=['POST'])
-def upload_validate_file():
-    metadata_file = request.files.get('metadata_file')
-    data_file = request.files.get('data_file')
-
-    if not metadata_file or not data_file:
-        flash('Both files are required.')
-        return redirect('/data-management')
-
-    # Save temp files
-    metadata_path = os.path.join('temp_uploads', secure_filename(metadata_file.filename))
-    data_path = os.path.join('temp_uploads', secure_filename(data_file.filename))
-    metadata_file.save(metadata_path)
-    data_file.save(data_path)
-
-    # Read and validate
-    try:
-        metadata_df = pd.read_csv(metadata_path)
-        data_df = pd.read_excel(data_path)
-
-        required_columns = metadata_df['column_name'].dropna().tolist()
-        data_columns = data_df.columns.tolist()
-
-        if not all(col in data_columns for col in required_columns):
-            missing = list(set(required_columns) - set(data_columns))
-            flash(f'Missing columns in uploaded XLSX: {missing}')
-            print('Missing columns in uploaded XLSX:', missing)
-            return redirect('/data-management')
-
-        # Upload to S3
-        s3_key = f'datafiles/{uuid.uuid4()}_{secure_filename(data_file.filename)}'
-        s3.upload_file(data_path, BUCKET_NAME, s3_key)
-        print(f"✅ File {data_file.filename} uploaded to S3 bucket '{BUCKET_NAME}' in folder 'datafiles' as '{s3_key}'")
-
-        # Save to DB
-        with sqlite3.connect(DB_NAME) as conn:
-            conn.execute("""
-                INSERT INTO data_files_metadata (file_name, s3_path) 
-                VALUES (?, ?)""",
-                (data_file.filename, s3_key)
-            )
-
-        data_df.to_sql('raw_data', conn, if_exists='append', index=False)
-        print(f"✅ Saved {data_file.filename} data to raw_data table.")
-
-        flash('✅ File validated and uploaded successfully!')
-    except Exception as e:
-        print(f'Error: {str(e)}')
-        flash(f'Error: {str(e)}')
-
-    # Clean up
-    os.remove(metadata_path)
-    os.remove(data_path)
-
-    return redirect('/data-management')
-
 @app.route("/chat-with-rag")
 def chat_with_rag():
     return render_template("chat_window.html")
@@ -869,8 +804,6 @@ def rag_chat_api():
 
     sql_query = generate_sql_from_question(user_question)
     result_rows = execute_sql_query(sql_query)
-
-    # print(result_rows)
 
     response_text = generate_natural_language_response(user_question, sql_query, result_rows)
 
