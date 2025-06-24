@@ -7,9 +7,7 @@ import json
 import os
 from config import DB_NAME,client
 import pandas as pd
-import boto3
 import os
-import uuid
 import sqlite3
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
