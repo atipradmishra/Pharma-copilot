@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Drilldown Chart{% endblock %}
+{% block content %}
+
+<!-- Top-right Home button -->
+<div class="flex justify-end items-center p-4">
+  <a href="/loginlanding" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    Home
+  </a>
+</div>
+
+<div class="ml-64 p-6">
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Drilldown Detail View</h1>
+    <a href="/graph-query" class="text-sm text-blue-600 hover:underline">⬅️ Back to Dashboard</a>
+  </div>
+
+  <!-- Drilldown Summary -->
+  {% if summary %}
+  <div class="bg-white p-4 rounded-lg shadow mb-6">
+    <p><strong>Drilldown Insight Query:</strong> <span class="text-blue-800 font-semibold">{{ user_query }}</span></p>
+    <p><strong>Summary:</strong> {{ summary }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Drilldown Chart -->
+  {% if chart_labels and chart_values %}
+  <div class="bg-white p-4 rounded-lg shadow mb-6 h-96">
+    <h2 class="font-bold text-sm mb-2">Detailed Breakdown for "{{ label }}"</h2>
+    <canvas id="drilldownChart"></canvas>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Chart Script -->
+{% if chart_labels and chart_values %}
+<script>
+  const ctx = document.getElementById("drilldownChart").getContext("2d");
+  const chartType = "{{ drill_chart_type or 'bar' }}";
+
+  const chart = new Chart(ctx, {
+    type: "{{ chart_type }}",
+    data: {
+      labels: {{ chart_labels | tojson | safe }},
+      datasets: [{
+        label: "Data",
+        data: {{ chart_values | tojson | safe }},
+        backgroundColor: {{ chart_colors | tojson | safe }},
+        borderColor: {{ chart_colors | tojson | safe }},
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        {% if chart_type in ['bar', 'line', 'stacked_bar', 'area'] %}
+        y: {
+          beginAtZero: true
+        }
+        {% endif %}
+      },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const label = chart.data.labels[index];
+          // Redirect to drill-down route
+          window.location.href = `/drilldown?label=${encodeURIComponent(label)}&query={{ user_query | urlencode }}`;
+        }
+      }
+    }
+
+  });
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return chartType === 'pie'
+              ? `${context.label}: ${context.parsed.toFixed(2)}`
+              : `${context.label}: ${context.parsed.y ?? context.parsed}`;
+          }
+        }
+      }
+    },
+    scales: (chartType === 'pie') ? {} : {
+      x: {
+        ticks: { autoSkip: false, maxRotation: 45, minRotation: 30 }
+      },
+      y: {
+        beginAtZero: true
+      }
+    },
+    onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const label = chart.data.labels[index];
+          // Redirect to drill-down route
+          window.location.href = `/drilldown?label=${encodeURIComponent(label)}&query={{ user_query | urlencode }}`;
+        }
+      }
+  };
+
+  new Chart(ctx, {
+    type: chartType,
+    data: chartData,
+    options: chartOptions
+  });
+</script>
+{% endif %}
+
+{% endblock %}

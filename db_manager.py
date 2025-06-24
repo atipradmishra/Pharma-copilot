@@ -1,6 +1,6 @@
 import sqlite3
 import hashlib
-from config import DB_NAME
+from config import BUCKET_NAME,DB_NAME
 
 # Create users table
 def create_users_table():
@@ -66,6 +66,15 @@ def create_users_table():
             date TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS query_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            user_query TEXT,
+            generated_sql TEXT,
+            rag_responce TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -92,3 +101,34 @@ def authenticate_user(username, password):
     user = c.fetchone()
     conn.close()
     return user is not None
+
+def save_query_log_to_db(timestamp, user_query, generated_sql, rag_responce):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO query_logs (timestamp, user_query, generated_sql, rag_responce)
+        VALUES (?, ?, ?, ?)
+    """, (timestamp, user_query, generated_sql, rag_responce))
+    conn.commit()
+    conn.close()
+
+def fetch_query_logs(limit=300):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT timestamp, user_query, generated_sql, rag_responce
+        FROM query_logs
+        ORDER BY timestamp DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "timestamp": row[0],
+            "user_query": row[1],
+            "sql": row[2],
+            "value": row[3]
+        }
+        for row in rows]

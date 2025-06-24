@@ -1,16 +1,20 @@
 from flask import Flask, render_template, jsonify, request, flash, redirect, url_for, session
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from db_manager import create_users_table, register_user, authenticate_user
+from db_manager import create_users_table, fetch_query_logs, register_user, authenticate_user, save_query_log_to_db
 from chatagent.chat_agent import execute_sql_query, generate_sql_from_question, generate_natural_language_response, suggest_follow_up_questions
 import json
 import os
 from config import DB_NAME,client
 import pandas as pd
+import boto3
 import os
+import uuid
 import sqlite3
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
+
+from graphqueryagent.querygraph_copilot import generate_followup_query, generate_graph_insight, generate_sql_for_graph, get_color_palette
 # from chatagent.rag_synthesizer import generate_rag_response
 
 app = Flask(__name__)
@@ -18,6 +22,19 @@ app.secret_key = "dev_zQ0xyfjkundFVF9GiR0PnT8DbTVczXd3yumese3RGlKax6OIOBWku4giwU
 
 create_users_table()
 
+def run_sql(sql: str):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        return {"columns": columns, "rows": rows}
+    except Exception as e:
+        return {"error": str(e), "columns": [], "rows": []}
+    finally:
+        if conn:
+            conn.close()
 
 def query_db(query, params=()):
     with sqlite3.connect(DB_NAME) as conn:
@@ -804,26 +821,94 @@ def rag_chat_api():
 
     sql_query = generate_sql_from_question(user_question)
     result_rows = execute_sql_query(sql_query)
-
-    response_text = generate_natural_language_response(user_question, sql_query, result_rows)
-
+    response_text = generate_natural_language_response(user_question, result_rows)
     followups = suggest_follow_up_questions(user_question, response_text)
 
-    print(response_text)
-    print(followups)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    save_query_log_to_db(timestamp, user_question, sql_query, response_text)
 
     return jsonify({
         "response": response_text,
         "followups": followups
     })
 
-@app.route("/graph-query")
+@app.route("/graph-query" , methods=["GET", "POST"])
 def graph_query():
-    return render_template("workin_progress.html")
+    user_query = ""
+    chart_labels = []
+    chart_values = []
+    chart_colors = []
+    summary = ""
+
+    chart_type = "bar"
+    if "pie" in user_query.lower():
+        chart_type = "pie"
+    elif "line" in user_query.lower():
+        chart_type = "line"
+
+    if request.method == "POST":
+        user_query = request.form.get("graph_query")
+
+        sql_query = generate_sql_for_graph(user_query)
+        result_rows = execute_sql_query(sql_query)
+        print("📊 Result Rows:", result_rows)
+        result = generate_graph_insight(result_rows,user_query)
+        print("🔍 LLM Output:", result)
+
+        if "error" in result:
+            summary = result["error"]
+        else:
+            sql = result.get("sql")
+            summary = result.get("summary", "")
+            chart_type = result.get("suggested_chart", "bar")
+            x_axis = result.get("x_axis")
+            y_axis = result.get("y_axis")
+
+            print(f"📊 SQL: {sql}")
+            query_result = run_sql(sql_query)
+            print("📈 Query Result:", query_result)
+
+            # Step 2: Extract chart data
+            if query_result.get("rows"):
+                chart_labels = [row[0] for row in query_result["rows"]]
+                chart_values = [row[1] for row in query_result["rows"]]
+                chart_colors = get_color_palette(len(chart_labels))
+
+        # Step 3: Store to session history
+        if "graph_history" not in session:
+            session["graph_history"] = []
+
+        session["graph_history"].append({
+            "query": user_query,
+            "summary": summary,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        session.modified = True
+        chart_colors = get_color_palette(len(chart_labels))
+        print(f"I am here {summary}")
+    return render_template("graph_query.html",
+                           user_query=user_query,
+                           summary=summary,
+                           chart_colors=chart_colors,
+                           chart_labels=chart_labels,
+                           chart_values=chart_values,
+                           chart_type=chart_type,
+                           graph_history=session.get("graph_history", []))
+
+
+@app.route("/clear-graph-history", methods=["POST"])
+def clear_graph_history():
+    session.pop("graph_history", None)
+    return redirect("/graph-query")
+
+@app.route("/rag-dashboard")
+def rag_dashboard():
+    return render_template("rag_dashboard.html")
 
 @app.route("/query-log-analyzer")
 def query_log_analyzer():
-    return render_template("workin_progress.html")
+    logs = fetch_query_logs(limit=300)
+    return render_template("query_log_analyzer.html", logs=logs)
 
 @app.route("/prompt-config")
 def prompt_config():
@@ -832,6 +917,164 @@ def prompt_config():
 @app.route("/data-dash-config")
 def data_dash_config():
     return render_template("workin_progress.html")
+
+@app.route("/data-freshness")
+def data_freshness():
+
+    freshness = [
+        {
+            "table": "patients",
+            "agent": "ETL_Agent_1",
+            "frequency": "Daily",
+            "last_date": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "status": "✅ Fresh",
+            "schema": {
+                "required_columns": {"status": "✅ Pass", "missing_columns": []},
+                "column_types": {"status": "✅ Pass", "type_mismatches": []},
+                "unexpected_columns": {"status": "✅ Pass", "extra_columns": []},
+                "primary_key": {"status": "✅ Pass", "message": ""}
+            },
+            "data_validation": {
+                "nulls": {"age": 3, "gender": 1},
+                "duplicates": 0,
+                "date_format_errors": [],
+                "non_numeric_columns": []
+            }
+        },
+        {
+            "table": "clinical_trials",
+            "agent": "ETL_Agent_2",
+            "frequency": "Weekly",
+            "last_date": (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d"),
+            "status": "⚠️ Stale",
+            "schema": {
+                "required_columns": {"status": "❌ Fail", "missing_columns": ["trial_id"]},
+                "column_types": {"status": "✅ Pass", "type_mismatches": []},
+                "unexpected_columns": {"status": "✅ Pass", "extra_columns": []},
+                "primary_key": {"status": "✅ Pass", "message": ""}
+            },
+            "data_validation": {
+                "nulls": {},
+                "duplicates": 5,
+                "date_format_errors": ["start_date"],
+                "non_numeric_columns": ["trial_phase"]
+            }
+        },
+        {
+            "table": "adverse_events",
+            "agent": "ETL_Agent_3",
+            "frequency": "Monthly",
+            "last_date": (datetime.now() - timedelta(days=45)).strftime("%Y-%m-%d"),
+            "status": "❌ No Data",
+            "schema": {
+                "required_columns": {"status": "✅ Pass", "missing_columns": []},
+                "column_types": {"status": "❌ Fail", "type_mismatches": [("event_code", "int", "str")]},
+                "unexpected_columns": {"status": "✅ Pass", "extra_columns": []},
+                "primary_key": {"status": "✅ Pass", "message": ""}
+            },
+            "data_validation": {
+                "nulls": {"event_code": 2},
+                "duplicates": 0,
+                "date_format_errors": [],
+                "non_numeric_columns": []
+            }
+        },
+        {
+            "table": "medications",
+            "agent": "ETL_Agent_1",
+            "frequency": "Daily",
+            "last_date": (datetime.now()).strftime("%Y-%m-%d"),
+            "status": "✅ Fresh",
+            "schema": {
+                "required_columns": {"status": "✅ Pass", "missing_columns": []},
+                "column_types": {"status": "✅ Pass", "type_mismatches": []},
+                "unexpected_columns": {"status": "❌ Fail", "extra_columns": ["temp_col"]},
+                "primary_key": {"status": "✅ Pass", "message": ""}
+            },
+            "data_validation": {
+                "nulls": {},
+                "duplicates": 2,
+                "date_format_errors": [],
+                "non_numeric_columns": []
+            }
+        },
+        {
+            "table": "inventory",
+            "agent": "ETL_Agent_2",
+            "frequency": "Weekly",
+            "last_date": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
+            "status": "✅ Fresh",
+            "schema": {
+                "required_columns": {"status": "✅ Pass", "missing_columns": []},
+                "column_types": {"status": "✅ Pass", "type_mismatches": []},
+                "unexpected_columns": {"status": "✅ Pass", "extra_columns": []},
+                "primary_key": {"status": "❌ Fail", "message": "Missing column 'item_id'"}
+            },
+            "data_validation": {
+                "nulls": {"stock": 4},
+                "duplicates": 1,
+                "date_format_errors": [],
+                "non_numeric_columns": ["stock"]
+            }
+        }
+    ]
+
+    return render_template("freshness_dashboard.html", freshness=freshness)
+
+@app.route('/drilldown')
+def drilldown():
+    label = request.args.get('label')
+    parent_query = request.args.get('query')
+
+    chart_labels = []
+    chart_values = []
+    chart_colors = []
+    summary = ""
+
+    # Generate follow-up query using OpenAI
+    refined_query = generate_followup_query(parent_query, label)
+    print(refined_query)
+
+    sql_query = generate_sql_for_graph(refined_query)
+    result_rows = execute_sql_query(sql_query)
+    print("📊 Result Rows:", result_rows)
+    result = generate_graph_insight(result_rows, refined_query)
+
+    chart_type = "bar"
+    if "pie" in parent_query.lower():
+        chart_type = "pie"
+    elif "line" in parent_query.lower():
+        chart_type = "line"
+
+    if "error" in result:
+            summary = result["error"]
+    else:
+        sql = result.get("sql")
+        summary = result.get("summary", "")
+
+        print(f"📊 SQL: {sql}")
+        query_result = run_sql(sql_query)
+        print("📈 Query Result:", query_result)
+
+        if query_result.get("rows"):
+            chart_labels = [row[0] for row in query_result["rows"]]
+            chart_values = [row[1] for row in query_result["rows"]]
+            chart_colors = get_color_palette(len(chart_labels))
+
+
+    return render_template(
+        'graph_drilldown.html',
+        user_query=refined_query,
+        summary=summary,
+        chart_colors=chart_colors,
+        chart_labels=chart_labels,
+        chart_values=chart_values,
+        chart_type=chart_type,
+        label=label
+    )
+
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

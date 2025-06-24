@@ -30,7 +30,111 @@
       <ul id="timeline" class="space-y-3 text-sm"></ul>
   </div>
 
-  <script>
+<!-- Copilot Floating Button -->
+<button id="copilotBtn" class="fixed bottom-5 right-5 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 z-50">
+    Ask Copilot 🤖
+</button>
+
+<!-- Chat Sidebar -->
+<div id="chatSidebar" class="fixed top-0 right-0 w-full md:w-96 h-full bg-white dark:bg-gray-900 shadow-lg p-4 transform translate-x-full transition-transform duration-300 z-40 flex flex-col">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-lg font-semibold">Copilot Assistant</h2>
+        <button id="closeChat" class="text-red-500 text-xl">&times;</button>
+    </div>
+
+    <div id="chatOutput" class="flex-grow max-h-[300px] overflow-y-auto bg-gray-100 dark:bg-gray-800 p-3 overflow-y-auto rounded text-sm whitespace-pre-line space-y-4">
+        <em class="text-gray-400">Ask something like "List all expired inventory items along with their category, unit, and whether an expiry alert has been triggered."</em>
+    </div>
+    
+    <!-- Input -->
+    <div class="flex gap-2 mt-2 mb-16">
+        <input type="text" id="chatInput" class="flex-grow p-2 rounded border dark:bg-gray-800 dark:text-white" placeholder="Ask your question..." />
+        <button id="sendBtn" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">Send</button>
+        <button id="voiceBtn" class="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded">🎤</button>
+    </div>
+</div>
+
+<script>
+    const copilotBtn = document.getElementById('copilotBtn');
+    const chatSidebar = document.getElementById('chatSidebar');
+    const closeChat = document.getElementById('closeChat');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatInput = document.getElementById('chatInput');
+    const chatOutput = document.getElementById('chatOutput');
+    const voiceBtn = document.getElementById('voiceBtn');
+
+    const chatHistory = [];
+
+    copilotBtn.onclick = () => chatSidebar.classList.remove('translate-x-full');
+    closeChat.onclick = () => chatSidebar.classList.add('translate-x-full');
+
+    sendBtn.onclick = async () => {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        const tempId = Date.now();
+        chatHistory.push({ id: tempId, question: message, answer: 'thinking' });
+        renderChat();
+
+        const res = await fetch('/api/copilot-query', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message: message})
+        });
+
+        const data = await res.json();
+        const item = chatHistory.find(h => h.id === tempId);
+        item.answer = data.response;
+        renderChat();
+
+        chatInput.value = '';
+    };
+
+    function renderChat() {
+        chatOutput.innerHTML = '';
+        chatHistory.forEach(h => {
+            chatOutput.innerHTML += `
+                <div class="bg-white dark:bg-gray-700 rounded p-2 shadow">
+                    🧠 <strong>You:</strong> ${h.question}<br>
+                    🤖 <strong>Copilot:</strong> ${h.answer === 'thinking' ? "<em>Copilot is thinking...</em>" : h.answer}
+                </div>
+            `;
+        });
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    function handleSuggestion(text) {
+        chatInput.value = text;
+        sendBtn.click();
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+    if (recognition) {
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        voiceBtn.onclick = () => {
+            recognition.start();
+            voiceBtn.textContent = "🎙";
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            chatInput.value = transcript;
+            voiceBtn.textContent = "🎤";
+        };
+
+        recognition.onerror = () => {
+            voiceBtn.textContent = "🎤";
+        };
+    } else {
+        voiceBtn.disabled = true;
+        voiceBtn.title = "Voice input not supported";
+    }
+
     fetch('/api/dummy-alerts-dashboard')
       .then(res => res.json())
       .then(data => {

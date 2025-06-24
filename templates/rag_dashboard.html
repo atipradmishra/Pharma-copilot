@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}RAG Agents Dashboard{% endblock %}
+
+{% block content %}
+<div class="ml-64 p-6 min-h-screen">
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-2xl font-bold text-center text-blue-900 mb-2">RAG Agents Dashboard</h2>
+    <p class="text-sm text-center text-gray-500 mb-6">Monitor and evaluate retrieval-augmented generation agents</p>
+
+    <!-- Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white border rounded-lg shadow p-4 text-center">
+        <p class="text-sm text-gray-500">Total Agents</p>
+        <p class="text-2xl font-semibold text-blue-900">3</p>
+      </div>
+      <div class="bg-white border rounded-lg shadow p-4 text-center">
+        <p class="text-sm text-gray-500">Active Agents</p>
+        <p class="text-2xl font-semibold text-blue-900">3</p>
+      </div>
+      <div class="bg-white border rounded-lg shadow p-4 text-center">
+        <p class="text-sm text-gray-500">Total Queries Today</p>
+        <p class="text-2xl font-semibold text-blue-900">2</p>
+      </div>
+      <div class="bg-white border rounded-lg shadow p-4 text-center">
+        <p class="text-sm text-gray-500">Avg Latency (Sec)</p>
+        <p class="text-2xl font-semibold text-blue-900">4.38</p>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white border rounded-lg p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Query Volume per Agent</h3>
+        <img src="/static/query_volume_pie.png" alt="Query Volume Chart" class="w-full h-auto">
+      </div>
+      <div class="bg-white border rounded-lg p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Daily Queries per Agent</h3>
+        <img src="/static/daily_queries_line.png" alt="Daily Queries Line Chart" class="w-full h-auto">
+      </div>
+    </div>
+
+    <!-- Agent Table -->
+    <div class="bg-white border rounded-lg p-4 mb-6 overflow-auto">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Agent Overview</h3>
+      <table class="min-w-full text-sm border border-gray-200">
+        <thead class="bg-gray-100 text-left">
+          <tr>
+            <th class="border px-2 py-1">Agent Name</th>
+            <th class="border px-2 py-1">Status</th>
+            <th class="border px-2 py-1">Queries Today</th>
+            <th class="border px-2 py-1">Avg Latency</th>
+            <th class="border px-2 py-1">Last Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="border px-2 py-1">Product Complaint Bot</td>
+            <td class="border px-2 py-1">Active</td>
+            <td class="border px-2 py-1">2</td>
+            <td class="border px-2 py-1">13.14</td>
+            <td class="border px-2 py-1 bg-red-600 text-white">2025-05-15 15:09:16</td>
+          </tr>
+          <tr>
+            <td class="border px-2 py-1">Labelling Bot</td>
+            <td class="border px-2 py-1">Active</td>
+            <td class="border px-2 py-1">0</td>
+            <td class="border px-2 py-1">0</td>
+            <td class="border px-2 py-1 bg-red-600 text-white">None</td>
+          </tr>
+          <tr>
+            <td class="border px-2 py-1">Regulatory Bot</td>
+            <td class="border px-2 py-1">Active</td>
+            <td class="border px-2 py-1">0</td>
+            <td class="border px-2 py-1">0</td>
+            <td class="border px-2 py-1 bg-red-600 text-white">None</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Logs -->
+    <div class="bg-white border rounded-lg p-4">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Recent Query Logs</h3>
+      <div class="space-y-4">
+        <details>
+          <summary class="cursor-pointer text-blue-700">Product Complaint Bot - Recent Logs</summary>
+          <pre class="bg-gray-100 p-3 rounded mt-2 text-xs text-gray-800">[log content here]</pre>
+        </details>
+        <details>
+          <summary class="cursor-pointer text-blue-700">Labeling Bot - Recent Logs</summary>
+          <pre class="bg-gray-100 p-3 rounded mt-2 text-xs text-gray-800">[log content here]</pre>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

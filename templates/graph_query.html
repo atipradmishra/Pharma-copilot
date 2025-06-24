@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Graph Query Copilot{% endblock %}
+{% block content %}
+
+<!-- Top-right Home button -->
+<div class="flex justify-end items-center p-4">
+  <a href="/loginlanding" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    Home
+  </a>
+</div>
+
+<div class="ml-64 p-6">
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Graph Query Copilot</h1>
+    <form action="/clear-graph-history" method="POST">
+      <button class="text-sm text-red-600 hover:underline">🗑️ Clear History</button>
+    </form>
+  </div>
+
+  <!-- Input -->
+  <div class="bg-white p-4 rounded-lg shadow mb-6">
+    <form action="/graph-query" method="POST" class="flex items-center space-x-4">
+      <input 
+        type="text" name="graph_query" value="{{ user_query }}" 
+        placeholder="Ask a question like: 'total complaints by site'" 
+        class="w-full border px-3 py-2 rounded text-sm"
+        required>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Generate</button>
+    </form>
+  </div>
+
+  <!-- AI Summary -->
+  {% if summary %}
+  <div class="bg-white p-4 rounded-lg shadow mb-6">
+    <p><strong>Summary:</strong> {{ summary }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Chart -->
+  {% if chart_labels and chart_values %}
+  <div class="bg-white p-4 rounded-lg shadow mb-6 h-96">
+    <h2 class="font-bold text-sm mb-2">Generated Visualization</h2>
+    <canvas id="graphChart"></canvas>
+  </div>
+  {% endif %}
+
+  <!-- Chat History -->
+  <div class="bg-white p-4 rounded-lg shadow mb-6">
+    <h2 class="font-bold text-sm mb-2">Query History</h2>
+    <ul class="text-sm list-disc pl-4 space-y-1">
+      {% for entry in graph_history %}
+        <li>
+          <strong>{{ entry.query }}</strong> — {{ entry.timestamp }} <br>
+          <span class="text-gray-600">{{ entry.summary }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<!-- Chart Script -->
+{% if chart_labels and chart_values %}
+<script>
+  const ctx = document.getElementById("graphChart").getContext("2d");
+  const chart = new Chart(ctx, {
+    type: "{{ chart_type }}",
+    data: {
+      labels: {{ chart_labels | tojson | safe }},
+      datasets: [{
+        label: "Data",
+        data: {{ chart_values | tojson | safe }},
+        backgroundColor: {{ chart_colors | tojson | safe }},
+        borderColor: {{ chart_colors | tojson | safe }},
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        {% if chart_type in ['bar', 'line', 'stacked_bar', 'area'] %}
+        y: {
+          beginAtZero: true
+        }
+        {% endif %}
+      },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const label = chart.data.labels[index];
+          // Redirect to drill-down route
+          window.location.href = `/drilldown?label=${encodeURIComponent(label)}&query={{ user_query | urlencode }}`;
+        }
+      }
+    }
+
+  });
+</script>
+{% endif %}
+{% endblock %}

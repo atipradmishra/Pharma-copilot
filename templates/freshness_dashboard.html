@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="ml-64 p-6 bg-gray-50 min-h-screen">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">📊 Freshness & Schema Monitoring Dashboard</h1>
+
+  <form method="POST" class="mb-6">
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow">
+      🔄 Refresh Schema
+    </button>
+  </form>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white p-4 shadow rounded">
+      <h2 class="text-lg font-semibold text-gray-700 mb-2">Freshness Status Summary</h2>
+      <div class="h-64">
+        <canvas id="freshnessChart"></canvas>
+      </div>
+    </div>
+    <div class="bg-white p-4 shadow rounded">
+      <h2 class="text-lg font-semibold text-gray-700 mb-2">Schema Validation Summary</h2>
+      <div class="h-64">
+        <canvas id="schemaChart"></canvas>
+      </div>
+    </div>
+    <div class="bg-white p-4 shadow rounded">
+      <h2 class="text-lg font-semibold text-gray-700 mb-2">Data Validation Summary</h2>
+      <div class="h-64">
+        <canvas id="dataValidationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white p-4 shadow rounded mb-6">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">📈 Overall Database Health Score</h2>
+    <div class="text-2xl font-bold text-green-600" id="healthScore">Score: Calculating...</div>
+  </div>
+
+  <div class="overflow-x-auto rounded shadow-lg mb-10">
+    <table class="min-w-full bg-white border border-gray-300 text-sm">
+      <thead class="bg-blue-50 text-gray-700">
+        <tr>
+          <th class="border px-4 py-2 text-left">Table</th>
+          <th class="border px-4 py-2 text-left">Agent</th>
+          <th class="border px-4 py-2 text-left">Frequency</th>
+          <th class="border px-4 py-2 text-left">Last Load Date</th>
+          <th class="border px-4 py-2 text-left">Freshness</th>
+          <th class="border px-4 py-2 text-left">Schema Validation</th>
+          <th class="border px-4 py-2 text-left">Score</th>
+        </tr>
+      </thead>
+      <tbody class="text-gray-800">
+        {% for row in freshness %}
+        <tr class="hover:bg-gray-50">
+          <td class="border px-4 py-2 font-medium">{{ row.table }}</td>
+          <td class="border px-4 py-2">{{ row.agent }}</td>
+          <td class="border px-4 py-2">{{ row.frequency }}</td>
+          <td class="border px-4 py-2">{{ row.last_date }}</td>
+          <td class="border px-4 py-2 freshness-status">{{ row.status }}</td>
+          <td class="border px-4 py-2 schema-status">
+            {% if row.schema and row.schema.required_columns is defined %}
+              {% if row.schema.required_columns.status != "✅ Pass" %}
+                ❌ Missing Columns
+              {% elif row.schema.column_types.status != "✅ Pass" %}
+                ❌ Type Mismatch
+              {% elif row.schema.unexpected_columns.status != "✅ Pass" %}
+                ⚠️ Extra Columns
+              {% elif row.schema.primary_key.status != "✅ Pass" %}
+                ❌ Missing Primary Key
+              {% else %}
+                ✅ OK
+              {% endif %}
+            {% else %}
+              {{ row.schema.status }}{% if row.schema.reason %} — {{ row.schema.reason }}{% endif %}
+            {% endif %}
+          </td>
+          <td class="border px-4 py-2 table-score"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 📋 Schema Validation Breakdown Table -->
+  <!-- 📋 Schema Validation Breakdown Table -->
+<div class="bg-white p-4 shadow rounded mb-10">
+  <h2 class="text-lg font-semibold text-gray-700 mb-4">📋 Schema Validation Breakdown</h2>
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-gray-300 text-sm" id="schemaBreakdownTable">
+      <thead class="bg-blue-50 text-gray-700">
+        <tr>
+          <th class="border px-4 py-2 text-left">Table</th>
+          <th class="border px-4 py-2 text-left">Missing Columns</th>
+          <th class="border px-4 py-2 text-left">Type Mismatch</th>
+          <th class="border px-4 py-2 text-left">Extra Columns</th>
+          <th class="border px-4 py-2 text-left">Primary Key</th>
+        </tr>
+      </thead>
+      <tbody class="text-gray-800">
+        {% for row in freshness %}
+        <tr class="hover:bg-gray-50">
+          <td class="border px-4 py-2 font-medium">{{ row.table }}</td>
+          <td class="border px-4 py-2">
+            {% if row.schema and row.schema.required_columns and row.schema.required_columns.missing_columns %}
+              {{ row.schema.required_columns.missing_columns | join(', ') }}
+            {% else %}
+              ✅ None
+            {% endif %}
+          </td>
+          <td class="border px-4 py-2">
+            {% if row.schema and row.schema.column_types and row.schema.column_types.type_mismatches %}
+              {% for mismatch in row.schema.column_types.type_mismatches %}
+                {{ mismatch[0] }} ({{ mismatch[1] }}→{{ mismatch[2] }})<br>
+              {% endfor %}
+            {% else %}
+              ✅ None
+            {% endif %}
+          </td>
+          <td class="border px-4 py-2">
+            {% if row.schema and row.schema.unexpected_columns and row.schema.unexpected_columns.extra_columns %}
+              {{ row.schema.unexpected_columns.extra_columns | join(', ') }}
+            {% else %}
+              ✅ None
+            {% endif %}
+          </td>
+          <td class="border px-4 py-2">
+            {% if row.schema and row.schema.primary_key and row.schema.primary_key.status != "✅ Pass" %}
+              ❌ {{ row.schema.primary_key.message }}
+            {% else %}
+              ✅ Valid
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- 📊 Data Validation Breakdown Table -->
+  <div class="bg-white p-4 shadow rounded mb-10">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">📊 Data Validation Details</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full border border-gray-300 text-sm">
+        <thead class="bg-blue-50 text-gray-700">
+          <tr>
+            <th class="border px-4 py-2 text-left">Table</th>
+            <th class="border px-4 py-2 text-left">Null Values</th>
+            <th class="border px-4 py-2 text-left">Duplicates</th>
+            <th class="border px-4 py-2 text-left">Date Errors</th>
+            <th class="border px-4 py-2 text-left">Numeric Issues</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-800">
+          {% for row in freshness %}
+          <tr class="hover:bg-gray-50">
+            <td class="border px-4 py-2 font-medium">{{ row.table }}</td>
+            <td class="border px-4 py-2">
+             {% if row.data_validation and row.data_validation.nulls %}
+		    {% for col, count in row.data_validation.nulls.items() %}{{ col }}: {{ count }}<br>{% endfor %}
+              {% else %}✅ No Nulls{% endif %}
+            </td>
+            <td class="border px-4 py-2">
+              {{ row.data_validation.duplicates if row.data_validation and row.data_validation.duplicates > 0 else '✅ No Duplicate' }}
+            </td>
+            <td class="border px-4 py-2">
+              {% if row.data_validation and row.data_validation.date_format_errors %}
+                {% for col in row.data_validation.date_format_errors %}
+                  {{ col }}<br>
+                {% endfor %}
+              {% else %}
+                ✅ No Date Format Error
+              {% endif %}
+            </td>
+            <td class="border px-4 py-2">
+              {% if row.data_validation and row.data_validation.non_numeric_columns %}
+                {{ row.data_validation.non_numeric_columns | join(', ') }}
+              {% else %}
+                ✅ No Numeric Issue
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const freshnessLabels = ["Fresh", "Stale", "No Data"];
+    const freshnessCounts = [0, 0, 0];
+    const schemaLabels = ["OK", "Missing", "Mismatch", "Extra", "Missing PK", "Skipped", "Error"];
+    const schemaCounts = [0, 0, 0, 0, 0, 0, 0];
+    const freshnessStatuses = [];
+    const schemaStatuses = [];
+
+    document.querySelectorAll(".freshness-status").forEach(el => {
+      const status = el.innerText;
+      freshnessStatuses.push(status);
+      if (status.includes("Fresh")) freshnessCounts[0]++;
+      else if (status.includes("Stale")) freshnessCounts[1]++;
+      else freshnessCounts[2]++;
+    });
+
+    document.querySelectorAll(".schema-status").forEach(el => {
+      const txt = el.innerText;
+      schemaStatuses.push(txt);
+      if (txt.includes("OK")) schemaCounts[0]++;
+      else if (txt.includes("Missing Columns")) schemaCounts[1]++;
+      else if (txt.includes("Type Mismatch")) schemaCounts[2]++;
+      else if (txt.includes("Extra Columns")) schemaCounts[3]++;
+      else if (txt.includes("Primary Key")) schemaCounts[4]++;
+      else if (txt.includes("Skipped")) schemaCounts[5]++;
+      else if (txt.includes("Error")) schemaCounts[6]++;
+    });
+
+    const totalTables = freshnessCounts.reduce((a, b) => a + b, 0);
+    const freshnessScore = totalTables > 0 ? ((freshnessCounts[0] / totalTables) * 100) : 0;
+
+    const totalSchemaChecks = schemaCounts.reduce((a, b) => a + b, 0);
+    const schemaScore = totalSchemaChecks > 0 ? ((schemaCounts[0] / totalSchemaChecks) * 100) : 0;
+
+    const overallScore = Math.round((freshnessScore * 0.6 + schemaScore * 0.4));
+    document.getElementById("healthScore").innerText = `Score: ${overallScore}%`;
+
+    const tableScoreEls = document.querySelectorAll(".table-score");
+    for (let i = 0; i < tableScoreEls.length; i++) {
+      let freshnessWeight = freshnessStatuses[i].includes("Fresh") ? 100 : 0;
+      let schemaScore = 0;
+      if (schemaStatuses[i].includes("OK")) schemaScore = 100;
+      else if (schemaStatuses[i].includes("Extra")) schemaScore = 80;
+      else if (schemaStatuses[i].includes("Mismatch")) schemaScore = 50;
+      else if (schemaStatuses[i].includes("Missing") || schemaStatuses[i].includes("Primary Key")) schemaScore = 30;
+      else schemaScore = 0;
+      const weightedScore = Math.round(freshnessWeight * 0.6 + schemaScore * 0.4);
+      tableScoreEls[i].innerText = `${weightedScore}%`;
+    }
+
+    new Chart(document.getElementById("freshnessChart"), {
+      type: "pie",
+      data: {
+        labels: freshnessLabels,
+        datasets: [{
+          label: "Freshness Distribution",
+          data: freshnessCounts,
+          backgroundColor: ["#34d399", "#facc15", "#ef4444"]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          title: { display: true, text: 'Freshness Status Summary' }
+        }
+      }
+    });
+
+    new Chart(document.getElementById("schemaChart"), {
+      type: "bar",
+      data: {
+        labels: schemaLabels,
+        datasets: [{
+          label: "Schema Validation Status",
+          data: schemaCounts,
+          backgroundColor: ["#10b981", "#f43f5e", "#e11d48", "#facc15", "#a855f7", "#06b6d4", "#9ca3af"]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Schema Validation Summary' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+	// NEW: Initialize table-level error counters
+    let tablesWithNulls = 0;
+    let tablesWithDuplicates = 0;
+    let tablesWithDateErrors = 0;
+    let tablesWithNumericIssues = 0;
+
+    {% for row in freshness %}
+      {% if row.data_validation %}
+        {% if row.data_validation.nulls and row.data_validation.nulls|length > 0 %}
+          tablesWithNulls++;
+        {% endif %}
+        {% if row.data_validation.duplicates and row.data_validation.duplicates > 0 %}
+          tablesWithDuplicates++;
+        {% endif %}
+        {% if row.data_validation.date_format_errors and row.data_validation.date_format_errors|length > 0 %}
+          tablesWithDateErrors++;
+        {% endif %}
+        {% if row.data_validation.non_numeric_columns and row.data_validation.non_numeric_columns|length > 0 %}
+          tablesWithNumericIssues++;
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    // ... existing code ...
+
+    // REPLACE the chart creation code for dataValidationChart
+    new Chart(document.getElementById("dataValidationChart"), {
+      type: "bar",
+      data: {
+        labels: ["Nulls", "Duplicates", "Date Errors", "Numeric Issues"],
+        datasets: [{
+          label: "Tables with Issues",
+          data: [
+            tablesWithNulls,
+            tablesWithDuplicates,
+            tablesWithDateErrors,
+            tablesWithNumericIssues
+          ],
+          backgroundColor: ["#f87171", "#fbbf24", "#60a5fa", "#a78bfa"]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Tables with Data Validation Issues' }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Tables'
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

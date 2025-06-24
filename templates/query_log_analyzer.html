@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Query Log Analyzer{% endblock %}
+
+{% block content %}
+<!-- Top-right Home button -->
+<div class="flex justify-end items-center p-4">
+  <a href="/loginlanding" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    Home
+  </a>
+</div>
+<div class="ml-64 p-6 min-h-screen">
+  <div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">📈 SQL Query Agent Logs</h2>
+
+    <div class="overflow-x-auto border border-gray-200 rounded shadow">
+      <table class="min-w-full table-auto text-sm">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-4 py-2 border">🕒 Timestamp</th>
+            <th class="px-4 py-2 border">🗣️ User Query</th>
+            <th class="px-4 py-2 border">📄 Generated SQL</th>
+            <th class="px-4 py-2 border">🔢 Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 border align-top text-gray-700">{{ log.timestamp }}</td>
+            <td class="px-4 py-2 border align-top text-gray-800 whitespace-pre-wrap">{{ log.user_query }}</td>
+            <td class="px-4 py-2 border align-top text-gray-800 whitespace-pre-wrap">{{ log.sql }}</td>
+            <td class="px-4 py-2 border align-top text-gray-800">{{ log.value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <form method="GET" action="/query-log-analyzer" class="mt-4 text-right">
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        🔄 Refresh Logs
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

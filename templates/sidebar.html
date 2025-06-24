@@ -43,16 +43,19 @@
       <li>
         <a href="/ac_dashboard" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/ac_dashboard' else '' }}">Alerts & Compliance Dashboard</a>
       </li>
+      <li>
+        <a href="/data-freshness" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/data-freshness' else '' }}">Data Freshness Monitoring Dashboard</a>
+      </li>
         <a href="/chat-with-rag" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/chat-with-rag' else '' }}">Copilot Query</a>
       </li>
       <li>
         <a href="/graph-query" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/graph-query' else '' }}">Graph Query</a>
       </li>
+      <li>
+        <a href="/query-log-analyzer" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/query-log-analyzer' else '' }}">Query Log Analyzer</a>
+      </li>
       
       {% if session.get("role") == "admin" %}
-        <li>
-          <a href="/query-log-analyzer" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/query-log-analyzer' else '' }}">Query Log Analyzer</a>
-        </li>
         <li>
           <a href="/rag-configure" class="block px-2 py-2 rounded hover:bg-blue-100 {{ 'bg-blue-100' if request.path == '/rag-configure' else '' }}">Configure/Manage RAG Agents</a>
         </li>

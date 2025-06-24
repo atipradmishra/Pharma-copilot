@@ -83,7 +83,7 @@ def execute_sql_query(query):
 
 
 
-def generate_natural_language_response(question, sql_query, result_rows):
+def generate_natural_language_response(question, result_rows):
     context = f"""
         You are an AI assistant specialized in pharmaceutical data analytics.
 
