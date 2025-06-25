@@ -1,8 +1,8 @@
 {% extends 'base.html' %} 
-{% block title %}Add RAG Agent{% endblock %} 
+{% block title %}Add Data Source{% endblock %} 
 {% block content %}
 <div class="ml-64 p-6">
-    <h1 class="text-2xl font-bold mb-6">Add / Edit RAG Agent</h1>
+    <h1 class="text-2xl font-bold mb-6">Add Data Source</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
@@ -21,70 +21,290 @@
       {% endif %}
     {% endwith %}
   
-  
-    <form class="bg-white p-6 rounded-lg shadow space-y-6" enctype="multipart/form-data" method = "POST">
-      <div>
-        <label class="block font-semibold mb-1" >RAG Agent Name</label>
-        <input type="text" name="name" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter agent name" required class="w-full px-4 py-2 border rounded-lg">
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block font-semibold mb-1" required class="w-full px-4 py-2 border rounded-lg">Select Bucket Name (S3)</label>
-          <select name="bucket" class="w-full px-4 py-2 border rounded-lg">
-            <option>etrm-etai-poc</option>
-            <option>etrm-etai-poc-ng</option>
-          </select>
-        </div>
-        <div>
-          <label class="block font-semibold mb-1" required class="w-full px-4 py-2 border rounded-lg">Select Folder</label>
-          <select name="folder" class="w-full px-4 py-2 border rounded-lg">
-            {% for label, value in folders.items() %}
-              <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block font-semibold mb-1">Model</label>
-          <select name="model" class="w-full px-4 py-2 border rounded-lg">
-            <option>OpenAI GPT-3.5</option>
-            <option>OpenAI GPT-4</option>
-            <option>Llama 2</option>
-            <option>Claude 3.5</option>
-            <option>Claude 4</option>
-            <option>Custom Model</option>
-          </select>
-        </div>
-        <div>
-          <label class="block font-semibold mb-1">Temperature (Creativity)</label>
-          <input type="range" min="0" max="1" step="0.1" value="0.7" name="temperature" class="w-full">
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block font-semibold mb-1">Upload Data Dictionary (CSV)</label>
-          <input type="file" name="metadata_file" accept=".csv" class="w-full">
-        </div>
-        <div>
-          <label class="block font-semibold mb-1">Upload Transaction Log (TXT, PDF, CSV, DOCX)</label>
-          <input type="file" name="uploaded_file" accept=".txt,.pdf,.csv,.docx" class="w-full">
-        </div>
+    <form class="bg-white p-6 rounded-lg shadow space-y-6" enctype="multipart/form-data" method="POST">
+      <div class="mb-3">
+        <label for="source" class="form-label">Data Source:</label>
+        <select class="form-select w-full px-4 py-2 border rounded-lg" id="source" name="source">
+            <option value="" selected>Please Choose Data Source</option>
+            <option value="s3">Amazon S3</option>
+            <option value="sqlserver">SQL Server</option>
+            <option value="azure">Azure SQL Server</option>
+            <option value="mysql">MySQL</option>
+            <option value="oracle">Oracle</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="snowflake">Snowflake</option>
+			      <option value="sqlite">SQLite</option>
+        </select>
       </div>
 
       <div>
-        <label class="block font-semibold mb-1" required class="w-full px-4 py-2 border rounded-lg">📝 Provide Prompt Instructions</label>
-        <textarea name="prompt" rows="5" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter your custom prompt here..."></textarea>
+        <label class="block font-semibold mb-1">RAG Agent Name</label>
+        <input type="text" name="name" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter agent name" required>
       </div>
 
-      <div class="text-right">
-        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700">
-          Submit & Process Data
-        </button>
+      <div>
+        <label class="block font-semibold mb-1">Data Source Path</label>
+        <input type="text" name="data_source" class="w-full px-4 py-2 border rounded-lg"
+               placeholder="/data/market.json or s3://bucket/path" required>
       </div>
+
+      <!-- Rest of the form (unchanged parts) -->
+    </form>
+</div>
+
+<div id="connModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-8 overflow-y-auto max-h-[90vh] relative">
+    <!-- Close Icon -->
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-xl font-bold">&times;</button>
+
+    <h2 class="text-2xl font-semibold text-blue-700 mb-2">Connection Setup</h2>
+    <p class="text-sm text-gray-600 mb-4">Please provide connection details for the selected data source, along with the RAG Agent Name.</p>
+
+	<form id="connForm" class="space-y-4" action="/save-connection" method="POST">
+      <!-- RAG Agent Name -->
+      <div>
+        <label for="modal_agent_name" class="block text-sm font-medium text-gray-700">RAG Agent Name</label>
+        <input type="text" id="modal_agent_name" name="modal_agent_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+      </div>
+
+      <!-- Credentials -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id='cred'>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">User ID</label>
+          <input type="text" name="uid" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input type="password" name="pwd" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+      </div>
+
+      <!-- Relational Fields -->
+      <div id="relational-fields" class="space-y-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Server / Hostname</label>
+          <input type="text" name="server" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Database / Service Name</label>
+          <input type="text" name="sql_database" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Port (optional)</label>
+            <input type="text" name="port" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Driver (optional)</label>
+            <input type="text" name="driver" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+          </div>
+        </div>
+      </div>
+
+      <!-- Snowflake Fields -->
+      <div id="snowflake-fields" class="hidden space-y-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Snowflake Account</label>
+          <input type="text" name="account" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Database</label>
+          <input type="text" name="sf_database" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Warehouse (optional)</label>
+            <input type="text" name="warehouse" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Schema (optional)</label>
+            <input type="text" name="schema" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+          </div>
+        </div>
+      </div>
+
+      <!-- S3 Fields -->
+      <div id="s3-fields" class="hidden space-y-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">S3 Access Key ID</label>
+          <input type="text" name="s3_access_key" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">S3 Secret Access Key</label>
+          <input type="password" name="s3_secret_key" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">S3 Region</label>
+          <input type="text" name="s3_region" placeholder="e.g., us-east-1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">S3 Bucket Name</label>
+          <input type="text" name="s3_bucket" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">S3 Path Prefix (optional)</label>
+          <input type="text" name="s3_prefix" placeholder="folder/path/" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        </div>
+      </div>
+
+
+      <!-- Submit -->
+      <div class="pt-4 text-right">
+    <button type="button" id="testConnBtn" class="bg-yellow-500 text-white px-4 py-2 rounded-md mr-2">Test Connection</button>
+	<button type="button" onclick="submitConnForm()" class="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700">Submit</button>
+
+    <button type="button" onclick="closeModal()" class="bg-red-600 text-white px-6 py-2 rounded-md shadow hover:bg-red-700">Cancel</button>
+</div>
+
     </form>
   </div>
+</div>
+
+<script>
+  const sourceSelector = document.getElementById('source');
+  const modal = document.getElementById('connModal');
+  const connForm = document.getElementById('connForm');
+  const snowflakeFields = document.getElementById('snowflake-fields');
+  const relationalFields = document.getElementById('relational-fields');
+
+  const s3Fields = document.getElementById('s3-fields');
+
+  function toggleFieldsForSource(source) {
+    if (source === 'sqlite') {
+      relationalFields.classList.add('hidden');
+      snowflakeFields.classList.add('hidden');
+      s3Fields.classList.add('hidden');
+    } else if (source === 'snowflake') {
+      relationalFields.classList.add('hidden');
+      snowflakeFields.classList.remove('hidden');
+      s3Fields.classList.add('hidden');
+    } else if (source === 's3') {
+      relationalFields.classList.add('hidden');
+      snowflakeFields.classList.add('hidden');
+      s3Fields.classList.remove('hidden');
+      cred.classList.add('hidden')
+    } else {
+      relationalFields.classList.remove('hidden');
+      snowflakeFields.classList.add('hidden');
+      s3Fields.classList.add('hidden');
+    }
+  }
+
+
+  sourceSelector.addEventListener('change', function () {
+    const selected = this.value;
+
+    toggleFieldsForSource(selected);
+
+    if (selected !== 'csv') {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');  // Show modal as flex
+
+      let sourceInput = connForm.querySelector('input[name="source"]');
+      if (!sourceInput) {
+        sourceInput = document.createElement('input');
+        sourceInput.type = 'hidden';
+        sourceInput.name = 'source';
+        connForm.appendChild(sourceInput);
+      }
+      sourceInput.value = selected;
+    }
+  });
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function submitConnForm() {
+    const requiredFields = [
+      'modal_agent_name', 'uid', 'pwd', 'server', 'sql_database'
+    ];
+
+    let allValid = true;
+
+    requiredFields.forEach(id => {
+      const input = connForm.querySelector(`[name="${id}"]`);
+      if (input && input.offsetParent !== null && !input.value.trim()) {
+        input.classList.add("border-red-500", "border-2");
+        allValid = false;
+      } else if (input) {
+        input.classList.remove("border-red-500", "border-2");
+      }
+    });
+
+    if (!allValid) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    const formData = new FormData(connForm);
+
+    fetch('/save-connection', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      closeModal();
+
+      const agentNameFromModal = document.getElementById('modal_agent_name').value;
+      const nameInputInMainForm = document.querySelector('form input[name="name"]');
+
+      if (nameInputInMainForm) {
+        nameInputInMainForm.value = agentNameFromModal;
+      } else {
+        const mainForm = document.querySelector('form');
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <label class="block font-semibold mb-1">RAG Agent Name</label>
+          <input type="text" name="name" class="w-full px-4 py-2 border rounded-lg" required>
+        `;
+        wrapper.querySelector('input').value = agentNameFromModal;
+        mainForm.insertBefore(wrapper, mainForm.querySelector('[name="data_source"]').parentElement);
+      }
+    })
+    .catch(err => {
+      alert('Error saving connection: ' + err.message);
+    });
+  }
+
+  // Run once on load
+  document.addEventListener('DOMContentLoaded', () => {
+    toggleFieldsForSource(sourceSelector.value);
+  });
+  
+  document.getElementById('testConnBtn').onclick = function() {
+    const formData = new FormData(connForm);
+    let data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+        console.log(value)
+    });
+
+    fetch('/test-connection', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.status === "success") {
+            alert("✅ " + res.message);
+        } else {
+            alert("❌ " + res.message);
+        }
+    })
+    .catch(err => {
+        alert("Error testing connection: " + err.message);
+    });
+};
+
+</script>
+
+
+
 {% endblock %}

@@ -2,3 +2,6 @@ flask
 flask_login
 openai
 pandas
+langchain-openai
+langchain
+boto3

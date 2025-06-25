@@ -75,6 +75,30 @@ def create_users_table():
             rag_responce TEXT
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS connections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            source TEXT,
+            sql_database TEXT,
+            driver TEXT,
+            server TEXT,
+            uid TEXT,
+            pwd TEXT,
+            account TEXT,
+            warehouse TEXT,
+            sf_database TEXT,
+            schema TEXT,
+            port INTEGER,
+            s3_access_key TEXT,
+            s3_secret_key TEXT,
+            s3_region TEXT,
+            s3_bucket TEXT,
+            s3_prefix TEXT,
+            is_active BOOLEAN DEFAULT TRUE CHECK(is_active IN (0, 1)),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()
 

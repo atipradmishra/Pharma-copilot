@@ -1,3 +1,4 @@
+import hashlib
 from flask import Flask, render_template, jsonify, request, flash, redirect, url_for, session
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,7 +12,7 @@ import os
 import sqlite3
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
-
+import boto3
 from graphqueryagent.querygraph_copilot import generate_followup_query, generate_graph_insight, generate_sql_for_graph, get_color_palette
 # from chatagent.rag_synthesizer import generate_rag_response
 
@@ -1039,9 +1040,9 @@ def drilldown():
     result = generate_graph_insight(result_rows, refined_query)
 
     chart_type = "bar"
-    if "pie" in parent_query.lower():
+    if "pie" in refined_query.lower():
         chart_type = "pie"
-    elif "line" in parent_query.lower():
+    elif "line" in refined_query.lower():
         chart_type = "line"
 
     if "error" in result:
@@ -1071,8 +1072,112 @@ def drilldown():
         label=label
     )
 
+@app.route("/add-datasource")
+def add_datasource():
+    return render_template("add_edit_agent.html") 
 
+@app.route("/test-connection", methods=["POST"])
+def test_connection():
+    data = request.get_json()
+    source = data.get("source", "").lower()
+    try:
+        if source == "snowflake":
+            import snowflake.connector
+            conn = snowflake.connector.connect(
+                user=data["uid"],
+                password=data["pwd"],
+                account=data["account"],
+                warehouse=data["warehouse"],
+                database=data["sf_database"],
+                schema=data["schema"]
+            )
+            conn.close()
+            return jsonify({"status": "success", "message": "Snowflake connection successful!"})
+        elif source == 's3':
+            s3_access_key = data.get('s3_access_key')
+            s3_secret_key = data.get('s3_secret_key')
+            s3_region = data.get('s3_region')
+            s3_bucket = data.get('s3_bucket')
+            s3_prefix = data.get('s3_prefix')  # Optional
 
+            print(f"Testing S3 connection with access key: {s3_access_key}, secret key: {s3_secret_key}, region: {s3_region}, bucket: {s3_bucket}, prefix: {s3_prefix}")
+
+            try:
+                s3 = boto3.client('s3',
+                                aws_access_key_id=s3_access_key,
+                                aws_secret_access_key=s3_secret_key,
+                                region_name=s3_region)
+                s3.head_bucket(Bucket=s3_bucket)  # Will throw if invalid
+                return jsonify({'status': 'success', 'message': 'S3 connection successful'})
+            except Exception as e:
+                return jsonify({'status': 'error', 'message': f'S3 connection failed: {str(e)}'})
+
+        # Add other sources as needed
+        return jsonify({"status": "error", "message": f"Unsupported source: {source}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    
+@app.route("/save-connection", methods=["POST"])
+def save_connection():
+    try:
+        data = request.form
+        source = data.get("source", "").lower()
+        plain_password = data.get("pwd", "")
+        encrypted_pwd =  hashlib.sha256(plain_password.encode()).hexdigest()
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        if source == "snowflake":
+            required_fields = ["uid", "pwd", "account", "sf_database"]
+            missing = [field for field in required_fields if not data.get(field)]
+            if missing:
+                msg = f"Missing Snowflake fields: {', '.join(missing)}"
+                # Always JSON for fetch requests!
+                return jsonify({"status": "error", "message": msg})
+
+            cursor.execute('''
+                INSERT INTO connections (
+                    source, uid, pwd,
+                    server, sql_database, port, driver,
+                    account, sf_database, warehouse, schema
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                source,
+                data.get("uid"), encrypted_pwd,
+                data.get("server"), data.get("sql_database"), data.get("port"), data.get("driver"),
+                data.get("account"), data.get("sf_database"), data.get("warehouse"), data.get("schema")
+            ))
+        elif source == 's3':
+            s3_access_key = request.form.get('s3_access_key')
+            s3_secret_key = request.form.get('s3_secret_key')
+            s3_region = request.form.get('s3_region')
+            s3_bucket = request.form.get('s3_bucket')
+            s3_prefix = request.form.get('s3_prefix')
+
+            encrypted_s3_secret_key = hashlib.sha256(s3_secret_key.encode()).hexdigest()
+
+            cursor.execute('''
+                INSERT INTO connections (
+                    source, uid, pwd,
+                    server, sql_database, port, driver,
+                    s3_access_key, s3_secret_key, s3_region, s3_bucket, s3_prefix
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                source,
+                s3_access_key, encrypted_s3_secret_key,
+                s3_region, s3_bucket, None, None,
+                s3_access_key, s3_secret_key, s3_region, s3_bucket, s3_prefix
+            ))
+
+        conn.commit()
+        conn.close()
+        msg = "Connection saved successfully!"
+
+        # Always return JSON for fetch requests!
+        return jsonify({"status": "success", "message": msg})
+
+    except Exception as e:
+        msg = f"Error saving connection: {str(e)}"
+        return jsonify({"status": "error", "message": msg})
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

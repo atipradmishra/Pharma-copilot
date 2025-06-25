@@ -13,18 +13,19 @@
     </header>
     <div class="flex justify-between items-center mb-6">
       <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" id="uploadButton">
-        Upload Metadata file
+        📤Upload Metadata file
       </button>
-
+      <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
+              onclick="document.getElementById('upload-modal').classList.remove('hidden')">
+        📤Upload New Data File
+      </button>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700" onclick="window.open('/add-datasource')">
+        ➕ Add Data Source
+      </button>
+    </div>
       <form>
         <input type="file" id="metadatafileInput" style="display: none;">
       </form>
-      <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700"
-              onclick="document.getElementById('upload-modal').classList.remove('hidden')">
-        Upload New File
-      </button>
-    </div>
-
     <div class="bg-white p-4 rounded-lg shadow">
       <table class="min-w-full text-sm text-left text-gray-600">
         <thead class="text-xs text-gray-500 uppercase bg-gray-100">
